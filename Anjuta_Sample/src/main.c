@@ -1,14 +1,14 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
 /*
  * main.c
- * Copyright (C) GWU 2010 <wwang@gwu.edu>
+ * Copyright (C) Unknown 2010 <wei@localhost.localdomain>
  * 
- * FSample is free software: you can redistribute it and/or modify it
+ * SampHis is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  * 
- * FSample is distributed in the hope that it will be useful, but
+ * SampHis is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
@@ -16,14 +16,16 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 /**********************************************************************
-* file:   contents copied from fsample.c
-* date:   Mon May 08 23:07:49 2010  
+* file:   contents copied from previous sample work
+*         try to add history information
+* date:   Mon May 11 2010  
 * Author: Wei Wang
 *
 * Description: 
-* ImplementRandom Drill-down Sampling To Statistic The
-* Number of files 
+* Integrate History Information to program
+*
 *
 * Compile with:
 * 
@@ -227,7 +229,7 @@ static char **get_all_subdirs(
 	chdir(path);
  
     used = 0;
-    alloc = 10;
+    alloc = 1000;
     if (!(s_dirs = malloc(alloc * sizeof *s_dirs))) 
 	{
         goto error_close;
@@ -241,8 +243,10 @@ static char **get_all_subdirs(
 		  continue;
 		
 		if(stat(pdirent->d_name, &f_ftime) != 0) 
-		  return -1;
-
+		{   
+			printf("stat error\n");			
+			return NULL;
+		}
 		/* currently only deal with regular file and directory 
 		 * are there any other kind ?
 		 */
@@ -314,6 +318,4 @@ void CleanExit(int sig)
 	(end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
     exit(0);
 }
-
-
 

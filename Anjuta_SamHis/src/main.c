@@ -52,25 +52,30 @@ double est_num;
 /* New struct for saving history */
 struct dir_node
 {
+	int sub_file_num;
+	int sub_dir_num;
+	
 	int bool_dir_covered;
 	char *dir_name;				/* rather than store the subdir name */
 	struct dir_node *sdirStruct; /* child array dynamically allocated */
 };
 
 struct dir_node root;
-struct dir_node *curPtr;
+
 
 void CleanExit(int sig);
-static char **get_all_subdirs(const char *path, int *, int *);
+void get_all_subdirs
+(const char *path, struct dir_node *, int *, int *);
 static char *dup_str(const char *s);
 double GetResult();
-int begin_sample_from(const char *root);
+int begin_sample_from(const char *root, struct dir_node *);
 int random_next(int random_bound);
 
 int main(int argc, char **argv) 
 {
 	unsigned int sample_times;
 	size_t i;
+	struct dir_node *curPtr;
 	
 	signal(SIGKILL, CleanExit);
 	signal(SIGTERM, CleanExit);
@@ -133,10 +138,7 @@ int begin_sample_from(const char *root, struct dir_node *curPtr)
 {
 	int sub_dir_num = 0;
 	int sub_file_num = 0;
-	char **sub_dirs;
-	size_t i;
-	
-	
+		
     //string curDict = dirstr;
 	/* designate the current directory where sampling is to happen */
 	char *cur_parent = dup_str(root);
@@ -150,10 +152,8 @@ int begin_sample_from(const char *root, struct dir_node *curPtr)
 		sub_file_num = 0;
 
 		/* get all sub_dirs struct allocated and organized in to an array
-		 * and curPtr's sdirStruct pointer already points to it */
-		
-		sub_dirs = get_all_subdirs(cur_parent, 
-		    curPtr, &sub_dir_num, &sub_file_num);
+		 * and curPtr's sdirStruct pointer already points to it */		
+		get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
 		
 		/* sdirStruct should not be null! */
 		if (!curPtr->sdirStruct)
@@ -161,27 +161,24 @@ int begin_sample_from(const char *root, struct dir_node *curPtr)
 			fprintf(stderr, "something went wrong in getting dirs\n");
 			return EXIT_FAILURE;
 		}                  
-                        
+        sub_dir_num = curPtr->sub_dir_num;
+		sub_file_num = curPtr->sub_file_num;
+		
         est_total = est_total + (sub_file_num / prob);
 
 		if (sub_dir_num > 0)
 		{
 			prob = prob / sub_dir_num;
 			int temp = random_next(sub_dir_num);
-			cur_parent = sub_dirs[temp];
-			curPtr = curPtr ->sdirStruct[temp];
-			/* free may not needed now 
-			for (i = 0; sub_dirs[i]; ++i) 
-			{
-				free(sub_dirs[i]);
-			}
-			free(sub_dirs);*/
+			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
+			curPtr = &curPtr ->sdirStruct[temp];		
 		}
 		
 		/* leaf directory, end the drill down */
         else
         {
 			est_num++;
+			chdir(root);
 			bool_sdone = 1;
         }
     } 
@@ -203,7 +200,6 @@ void get_all_subdirs(
 {
     DIR *dir;
     struct dirent *pdirent;
-    char **s_dirs;
     size_t alloc;
 	size_t used;
  	struct stat f_ftime;  /* distinguish files from directories */
@@ -211,13 +207,16 @@ void get_all_subdirs(
 	/* already stored the subdirs struct before
 	 * no need to scan the dir again */
 	if (curPtr->bool_dir_covered == 1)
+	{
+		chdir(path);
 		return;
-
-	/* so we 
-	
+	}
+		
+	/* so we have to scan */
 	/* root is given like the absolute path regardless of the cur_dir */
     if (!(dir = opendir(path)))
 	{
+		printf("current dir %s\n", get_current_dir_name());
 		printf("error opening dir %s\n", path);
         //goto error;
 		exit(-1);
@@ -225,6 +224,8 @@ void get_all_subdirs(
 
 	/* and change to this directory */
 	chdir(path);
+
+
  
     used = 0;
     alloc = 50;
@@ -273,7 +274,7 @@ void get_all_subdirs(
         		curPtr->sdirStruct = tmp;
         		alloc = new;
     		}
-    		if (!(curPtr->sdirStruct[used]->dir_name = dup_str(pdirent->d_name))) 
+    		if (!(curPtr->sdirStruct[used].dir_name = dup_str(pdirent->d_name))) 
 			{
         		//goto error_free;
 				printf("get name error!!!!\n");
@@ -285,8 +286,12 @@ void get_all_subdirs(
 		else 
 			continue;
 	}
-	curPtr->sdirStruct[used] = NULL;
 	*sub_dir_num = used;
+
+	curPtr->sub_file_num = *sub_file_num;
+	curPtr->sub_dir_num = *sub_dir_num;
+	/* update bool_dir_covered info */
+	curPtr->bool_dir_covered = 1;
     closedir(dir);
 
 	 /* previous approach to prevent memory leak  

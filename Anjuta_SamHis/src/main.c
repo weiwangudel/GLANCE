@@ -51,7 +51,7 @@ void get_all_subdirs
 (const char *path, struct dir_node *, int *, int *);
 static char *dup_str(const char *s);
 double GetResult();
-int begin_sample_from(const char *root, struct dir_node *);
+int begin_sample_from(const char *root, struct dir_node *, double);
 int random_next(int random_bound);
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	/* start sampling */
 	for (i=0; i < sample_times; i++)
 	{
-		begin_sample_from(argv[2], curPtr);
+		begin_sample_from(argv[2], curPtr, 1.0);
 		printf("there are on average %.2f files\n", GetResult());
 	}
 
@@ -127,7 +127,10 @@ int random_next(int random_bound)
  * absolute!!!! path, so every return would 
  * start from the correct place
  */
-int begin_sample_from(const char *sample_root, struct dir_node *curPtr) 
+int begin_sample_from(
+		const char *sample_root, 
+		struct dir_node *curPtr,
+		double old_prob) 
 {
 	int sub_dir_num = 0;
 	int sub_file_num = 0;
@@ -136,8 +139,8 @@ int begin_sample_from(const char *sample_root, struct dir_node *curPtr)
 	/* designate the current directory where sampling is to happen */
 	char *cur_parent = dup_str(sample_root);
 	int bool_sdone = 0;
-    double prob = 1;
-
+    //double prob = 1;
+	double prob = old_prob;
 		
     while (bool_sdone != 1)
     {
@@ -145,9 +148,14 @@ int begin_sample_from(const char *sample_root, struct dir_node *curPtr)
 		sub_file_num = 0;
 
 		/* get all sub_dirs struct allocated and organized in to an array
-		 * and curPtr's sdirStruct pointer already points to it */		
+		 * and curPtr's sdirStruct pointer already points to it 
+		 * after the execution of the get_all_subdirs ()
+		 * current directory is changed to cur_parent, either from
+		 * absolute path(the first call of this function under begin_sample_from
+		 * or relative path, the subsequent call of that 
+		 */
 		get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
-		
+
 		/* sdirStruct should not be null! */
 		if (!curPtr->sdirStruct)
 		{
@@ -162,6 +170,23 @@ int begin_sample_from(const char *sample_root, struct dir_node *curPtr)
 		if (sub_dir_num > 0)
 		{
 			prob = prob / sub_dir_num;
+			
+			if (prob < old_prob / 10000)
+			{
+				int i;
+				printf("test!!!!!!");
+				for (i = 0; i < 100; i++)
+				{
+					begin_sample_from(get_current_dir_name(), 
+					    curPtr,
+					    prob*100);
+				}
+				if (((int) old_prob) == 1)
+					est_num++;
+				bool_sdone = 1;
+				continue;
+			}
+			
 			int temp = random_next(sub_dir_num);
 			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
 			curPtr = &curPtr ->sdirStruct[temp];		
@@ -170,7 +195,8 @@ int begin_sample_from(const char *sample_root, struct dir_node *curPtr)
 		/* leaf directory, end the drill down */
         else
         {
-			est_num++;
+			if (((int) old_prob) == 1)
+				est_num++;
 
 			/* finishing this drill down, set the direcotry back */
 			chdir(sample_root);

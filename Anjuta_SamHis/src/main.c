@@ -1,22 +1,3 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
-/*
- * main.c
- * Copyright (C) Unknown 2010 <wei@localhost.localdomain>
- * 
- * SampHis is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * SampHis is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 /**********************************************************************
 * file:   contents copied from previous sample work
 *         try to add history information
@@ -40,8 +21,10 @@
 #include <signal.h>     /* SIGINT */
 #include <sys/stat.h>   /* stat() */
 #include <unistd.h>
-#include <time.h>    
+#include <sys/time.h>   /* gettimeofday() */
+#include <time.h>		/* time() */
 #include <assert.h>     /* assert()*/
+
 #define MAX_INT 65535
 
 struct timeval start;
@@ -50,6 +33,7 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
+
 /* New struct for saving history */
 struct dir_node
 {
@@ -71,6 +55,9 @@ static char *dup_str(const char *s);
 double GetResult();
 int begin_sample_from(const char *root, struct dir_node *);
 int random_next(int random_bound);
+
+/* why do I have to redefine to avoid the warning of get_current_dir_name? */
+char *get_current_dir_name(void);
 
 int main(int argc, char **argv) 
 {
@@ -125,10 +112,9 @@ int main(int argc, char **argv)
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
-	printf("dirs newly opened %ld\ndirs already_covered %ld\n",
-			newly_covered, already_covered);
-	printf("\"Note that the newly opened dirs should not exceed the total\
-number of directories existing there\"\n");
+
+	/* Exit and Display Statistic */
+	CleanExit (2);
 	return EXIT_SUCCESS;
 }
 
@@ -346,15 +332,14 @@ void CleanExit(int sig)
         printf("\nRestaring...\n");
 
     puts("\n\n=============================================================");
-    printf("put results here\n");
-	printf("there are on average %.2f files\n", GetResult());
-	printf("Not that the last unfinished est_num is counted as finished\n");
+	printf("Not that if last unfinished, est_num is counted as finished\n");
 	printf("Thus the correct result should be higher than the above value\n");
 	printf("\ndirs newly opened %ld\ndirs already_covered %ld\n",
 			newly_covered, already_covered);
 	printf("\"Note that the newly opened dirs should not exceed the total \
 number of directories existing there\"\n");
-    puts("\n\n=============================================================");
+	printf("there are on average %.2f files\n", GetResult());
+    puts("=============================================================");
     printf("Total Time:%ld milliseconds\n", 
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);
     printf("Total Time:%ld seconds\n", 

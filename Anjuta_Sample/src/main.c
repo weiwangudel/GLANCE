@@ -50,6 +50,15 @@ double est_total;
 double est_num;
 int  qcost;
 
+struct 
+{
+	
+	char ***
+}
+
+
+
+
 void CleanExit(int sig);
 static char **get_all_subdirs(const char *path, int *, int *);
 static char *dup_str(const char *s);
@@ -93,7 +102,11 @@ int main(int argc, char **argv)
         est_num = 0;
         qcost = 0;
 	}
+	
 	srand((int)time(0));//different seed number for random function
+	//srand can also be used like this
+	//srand(2); 
+	
 	/* start sampling */
 	for (i=0; i < sample_times; i++)
 	{
@@ -101,25 +114,18 @@ int main(int argc, char **argv)
 		printf("there are on average %.2f files\n", GetResult());
 	}
 
-	//printf("there are on average %.2f files\n", GetResult());
+	chdir("/tmp");	  /* this is for the output of gprof */
 	return EXIT_SUCCESS;
 }
 
-char * random_next(char **dirs, int random_bound)
+int random_next(int random_bound)
 {
 	assert(random_bound < RAND_MAX);
-	return dirs[random() % random_bound];
+	return rand() % random_bound;
 	
 }
 
-/* Didn't deal with the following access exception in the Original CSharp 
-				 catch (UnauthorizedAccessException)
-                    {
-                        sdone = true;
-                        est_num++;
-                        Console.Write("no right to access.");
-                    }
-*/
+
 int begin_sample_from(const char *root) 
 {
 	int sub_dir_num = 0;
@@ -139,11 +145,8 @@ int begin_sample_from(const char *root)
     {
 		sub_dir_num = 0;
 		sub_file_num = 0;
-		/*
-		 string[] flist = Directory.GetFiles(curDict);
-         string[] dlist = Directory.GetDirectories(curDict);
 
-		 */
+		/* get all sub dirs stored in the array */
 		sub_dirs = get_all_subdirs(cur_parent, &sub_dir_num, &sub_file_num);
 		if (!sub_dirs)
 		{
@@ -156,10 +159,8 @@ int begin_sample_from(const char *root)
 
 		if (sub_dir_num > 0)
 		{
-			//prob = prob / dlist.Length;
-			//curDict = dlist[ThreadSafeRandom.Next(dlist.Length)];
 			prob = prob / sub_dir_num;
-			cur_parent = dup_str(random_next(sub_dirs, sub_dir_num));
+			cur_parent = sub_dirs[random_next(sub_dir_num)];
  
 			for (i = 0; sub_dirs[i]; ++i) 
 			{
@@ -167,6 +168,8 @@ int begin_sample_from(const char *root)
 			}
 			free(sub_dirs);
 		}
+		
+		/* leaf directory, end the drill down */
         else
         {
 			est_num++;
@@ -229,7 +232,7 @@ static char **get_all_subdirs(
 	chdir(path);
  
     used = 0;
-    alloc = 1000;
+    alloc = 100;
     if (!(s_dirs = malloc(alloc * sizeof *s_dirs))) 
 	{
         goto error_close;
@@ -311,6 +314,7 @@ void CleanExit(int sig)
 
     puts("\n\n=============================================================");
     printf("put results here\n");
+	
     puts("\n\n=============================================================");
     printf("Total Time:%ld milliseconds\n", 
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);

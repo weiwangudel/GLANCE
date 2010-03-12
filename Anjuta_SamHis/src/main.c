@@ -45,8 +45,6 @@ struct dir_node
 	struct dir_node *sdirStruct; /* child array dynamically allocated */
 };
 
-struct dir_node root;
-
 
 void CleanExit(int sig);
 void get_all_subdirs
@@ -64,6 +62,7 @@ int main(int argc, char **argv)
 	unsigned int sample_times;
 	size_t i;
 	struct dir_node *curPtr;
+	struct dir_node root;
 	
 	signal(SIGKILL, CleanExit);
 	signal(SIGTERM, CleanExit);
@@ -124,15 +123,18 @@ int random_next(int random_bound)
 	return rand() % random_bound;	
 }
 
-
-int begin_sample_from(const char *root, struct dir_node *curPtr) 
+/* to ensure accuray, the root parameter should be passed as 
+ * absolute!!!! path, so every return would 
+ * start from the correct place
+ */
+int begin_sample_from(const char *sample_root, struct dir_node *curPtr) 
 {
 	int sub_dir_num = 0;
 	int sub_file_num = 0;
 		
     //string curDict = dirstr;
 	/* designate the current directory where sampling is to happen */
-	char *cur_parent = dup_str(root);
+	char *cur_parent = dup_str(sample_root);
 	int bool_sdone = 0;
     double prob = 1;
 
@@ -169,7 +171,9 @@ int begin_sample_from(const char *root, struct dir_node *curPtr)
         else
         {
 			est_num++;
-			chdir(root);
+
+			/* finishing this drill down, set the direcotry back */
+			chdir(sample_root);
 			bool_sdone = 1;
         }
     } 

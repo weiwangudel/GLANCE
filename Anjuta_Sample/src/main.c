@@ -48,24 +48,24 @@ struct timeval start;
 struct timeval end;
 double est_total;
 double est_num;
-int  qcost;
 
-struct 
+/* New struct for saving history */
+struct dir_node
 {
-	
-	char ***
-}
+	int bool_dir_covered;
+	char *dir_name;				/* rather than store the subdir name */
+	struct dir_node *sdirStruct; /* child array dynamically allocated */
+};
 
-
-
+struct dir_node root;
+struct dir_node *curPtr;
 
 void CleanExit(int sig);
 static char **get_all_subdirs(const char *path, int *, int *);
 static char *dup_str(const char *s);
-int GetCost();
 double GetResult();
 int begin_sample_from(const char *root);
-char * random_next(char **dirs, int random_bound);
+int random_next(int random_bound);
 
 int main(int argc, char **argv) 
 {
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 	}
 	if (chdir(argv[2]) != 0)
 	{
-		printf("Error when chdir to %s", argv[1]);
+		printf("Error when chdir to %s", argv[2]);
 		return EXIT_FAILURE; 
 	}
 
@@ -100,8 +100,12 @@ int main(int argc, char **argv)
 	{
         est_total = 0;
         est_num = 0;
-        qcost = 0;
 	}
+
+	/* Initialize the dir_node struct */
+	curPtr = &root;
+	curPtr->bool_dir_covered = 0;
+	curPtr->sdirStruct = NULL;
 	
 	srand((int)time(0));//different seed number for random function
 	//srand can also be used like this
@@ -110,7 +114,7 @@ int main(int argc, char **argv)
 	/* start sampling */
 	for (i=0; i < sample_times; i++)
 	{
-		begin_sample_from(argv[2]);
+		begin_sample_from(argv[2], curPtr);
 		printf("there are on average %.2f files\n", GetResult());
 	}
 
@@ -121,12 +125,11 @@ int main(int argc, char **argv)
 int random_next(int random_bound)
 {
 	assert(random_bound < RAND_MAX);
-	return rand() % random_bound;
-	
+	return rand() % random_bound;	
 }
 
 
-int begin_sample_from(const char *root) 
+int begin_sample_from(const char *root, struct dir_node *curPtr) 
 {
 	int sub_dir_num = 0;
 	int sub_file_num = 0;
@@ -146,27 +149,33 @@ int begin_sample_from(const char *root)
 		sub_dir_num = 0;
 		sub_file_num = 0;
 
-		/* get all sub dirs stored in the array */
-		sub_dirs = get_all_subdirs(cur_parent, &sub_dir_num, &sub_file_num);
-		if (!sub_dirs)
+		/* get all sub_dirs struct allocated and organized in to an array
+		 * and curPtr's sdirStruct pointer already points to it */
+		
+		sub_dirs = get_all_subdirs(cur_parent, 
+		    curPtr, &sub_dir_num, &sub_file_num);
+		
+		/* sdirStruct should not be null! */
+		if (!curPtr->sdirStruct)
 		{
 			fprintf(stderr, "something went wrong in getting dirs\n");
 			return EXIT_FAILURE;
 		}                  
                         
-        qcost++;
         est_total = est_total + (sub_file_num / prob);
 
 		if (sub_dir_num > 0)
 		{
 			prob = prob / sub_dir_num;
-			cur_parent = sub_dirs[random_next(sub_dir_num)];
- 
+			int temp = random_next(sub_dir_num);
+			cur_parent = sub_dirs[temp];
+			curPtr = curPtr ->sdirStruct[temp];
+			/* free may not needed now 
 			for (i = 0; sub_dirs[i]; ++i) 
 			{
 				free(sub_dirs[i]);
 			}
-			free(sub_dirs);
+			free(sub_dirs);*/
 		}
 		
 		/* leaf directory, end the drill down */
@@ -180,9 +189,119 @@ int begin_sample_from(const char *root)
 }
 
 
-int GetCost()
+/* Before the calling of the function, please ensure you have 
+ * already CDed to the right place, so the function can directly
+ * open the directory for the whole scanning
+ * Open dir requires you give either the absolute path, or the relative path
+ * to the current directory (which changes all the time)
+ */
+void get_all_subdirs(   
+    const char *path,               /* path name of the parent dir */
+    struct dir_node *curPtr,  /* */
+	int *sub_dir_num,		        /* number of sub dirs */
+	int *sub_file_num)		        /* number of sub files */
 {
-    return qcost;
+    DIR *dir;
+    struct dirent *pdirent;
+    char **s_dirs;
+    size_t alloc;
+	size_t used;
+ 	struct stat f_ftime;  /* distinguish files from directories */
+
+	/* already stored the subdirs struct before
+	 * no need to scan the dir again */
+	if (curPtr->bool_dir_covered == 1)
+		return;
+
+	/* so we 
+	
+	/* root is given like the absolute path regardless of the cur_dir */
+    if (!(dir = opendir(path)))
+	{
+		printf("error opening dir %s\n", path);
+        //goto error;
+		exit(-1);
+    }
+
+	/* and change to this directory */
+	chdir(path);
+ 
+    used = 0;
+    alloc = 50;
+    if (!(curPtr->sdirStruct
+			= malloc(alloc * sizeof (struct dir_node)) )) 
+	{
+        //goto error_close;
+		printf("malloc error!\n");
+		exit(-1);
+    }
+
+	/* scan the directory */
+    while ((pdirent = readdir(dir))) 
+	{
+		if(strcmp(pdirent->d_name, ".") == 0 ||
+				    strcmp(pdirent->d_name, "..") == 0) 
+		  continue;
+		
+		if(stat(pdirent->d_name, &f_ftime) != 0) 
+		{   
+			printf("stat error\n");			
+			return;
+		}
+		/* currently only deal with regular file and directory 
+		 * are there any other kind ?
+		 */
+		if (S_ISREG(f_ftime.st_mode))
+			(*sub_file_num)++;
+
+		/* record the sub direcotry names 
+		 * this would contain the hidden files begin with "."
+		 */
+		else if (S_ISDIR(f_ftime.st_mode)) 
+		{
+    		if (used + 1 >= alloc) 
+			{
+        		size_t new = alloc / 2 * 3;
+        		struct dir_node *tmp = 
+					realloc(curPtr->sdirStruct, new * sizeof (struct dir_node));
+        		if (!tmp) 
+				{
+            		//goto error_free;
+					printf("realloc error!\n");
+					exit(-1);
+        		}
+        		curPtr->sdirStruct = tmp;
+        		alloc = new;
+    		}
+    		if (!(curPtr->sdirStruct[used]->dir_name = dup_str(pdirent->d_name))) 
+			{
+        		//goto error_free;
+				printf("get name error!!!!\n");
+    		}
+    		++used;
+		}
+
+		/* other non-file, non-dir special files */
+		else 
+			continue;
+	}
+	sdirStruct[used] = NULL;
+	*sub_dir_num = used;
+    closedir(dir);
+
+	 /* previous approach to prevent memory leak  
+error_free:
+    while (used--) 
+	{
+        free(s_dirs[used]);
+    }
+    free(s_dirs);
+ 
+error_close:
+    closedir(dir);
+ 
+error:
+    return NULL;   */
 }
 
 double GetResult()
@@ -202,104 +321,6 @@ static char *dup_str(const char *s)
     }
     return t;
 }
-
-/* Before the calling of the function, please ensure you have 
- * already CDed to the right place, so the function can directly
- * open the directory for the whole scanning
- * Open dir requires you give either the absolute path, or the relative path
- * to the current directory (which changes all the time)
- */
-static char **get_all_subdirs(   
-    const char *path,            /* path name of the parent dir */
-	int *sub_dir_num,		    /* number of sub dirs */
-	int *sub_file_num)		    /* number of sub files */
-{
-    DIR *dir;
-    struct dirent *pdirent;
-    char **s_dirs;
-    size_t alloc;
-	size_t used;
- 	struct stat f_ftime;  /* distinguish files from directories */
-
-	/* root is given like the absolute path regardless of the cur_dir */
-    if (!(dir = opendir(path)))
-	{
-		printf("error opening dir\n");
-        goto error;
-    }
-
-	/* and change to this directory */
-	chdir(path);
- 
-    used = 0;
-    alloc = 100;
-    if (!(s_dirs = malloc(alloc * sizeof *s_dirs))) 
-	{
-        goto error_close;
-    }
-
-	/* scan the directory */
-    while ((pdirent = readdir(dir))) 
-	{
-		if(strcmp(pdirent->d_name, ".") == 0 ||
-				    strcmp(pdirent->d_name, "..") == 0) 
-		  continue;
-		
-		if(stat(pdirent->d_name, &f_ftime) != 0) 
-		{   
-			printf("stat error\n");			
-			return NULL;
-		}
-		/* currently only deal with regular file and directory 
-		 * are there any other kind ?
-		 */
-		if (S_ISREG(f_ftime.st_mode))
-			(*sub_file_num)++;
-
-		/* record the sub direcotry names 
-		 * this would contain the hidden files begin with "."
-		 */
-		else if (S_ISDIR(f_ftime.st_mode)) 
-		{
-    		if (used + 1 >= alloc) 
-			{
-        		size_t new = alloc / 2 * 3;
-        		char **tmp = realloc(s_dirs, new * sizeof *s_dirs);
-        		if (!tmp) 
-				{
-            		goto error_free;
-        		}
-        		s_dirs = tmp;
-        		alloc = new;
-    		}
-    		if (!(s_dirs[used] = dup_str(pdirent->d_name))) 
-			{
-        		goto error_free;
-    		}
-    		++used;
-		}
-		else 
-			continue;
-	}
-	s_dirs[used] = NULL;
-	*sub_dir_num = used;
-    closedir(dir);
-	return s_dirs;
- 
-error_free:
-    while (used--) 
-	{
-        free(s_dirs[used]);
-    }
-    free(s_dirs);
- 
-error_close:
-    closedir(dir);
- 
-error:
-    return NULL;
-}
-
 
 void CleanExit(int sig)
 {

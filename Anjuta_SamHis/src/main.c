@@ -175,11 +175,11 @@ int begin_sample_from(
 			{
 				int i;
 				printf("test!!!!!!");
-				for (i = 0; i < 50; i++)
+				for (i = 0; i < 100; i++)
 				{
 					begin_sample_from(get_current_dir_name(), 
 					    curPtr,
-					    prob*50);
+					    prob*100);
 				}
 				if (((int) old_prob) == 1)
 					est_num++;

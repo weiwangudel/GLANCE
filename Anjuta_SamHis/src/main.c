@@ -183,6 +183,7 @@ int begin_sample_from(
 				}
 				if (((int) old_prob) == 1)
 					est_num++;
+				chdir(sample_root);
 				bool_sdone = 1;
 				continue;
 			}

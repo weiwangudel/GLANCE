@@ -48,7 +48,8 @@ struct timeval start;
 struct timeval end;
 double est_total;
 double est_num;
-
+long int already_covered = 0;
+long int newly_covered = 0;
 /* New struct for saving history */
 struct dir_node
 {
@@ -124,6 +125,10 @@ int main(int argc, char **argv)
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
+	printf("dirs newly opened %ld\ndirs already_covered %ld\n",
+			newly_covered, already_covered);
+	printf("\"Note that the newly opened dirs should not exceed the total\
+number of directories existing there\"\n");
 	return EXIT_SUCCESS;
 }
 
@@ -208,11 +213,15 @@ void get_all_subdirs(
 	 * no need to scan the dir again */
 	if (curPtr->bool_dir_covered == 1)
 	{
+		/* This change dir is really important */
+		already_covered++;
 		chdir(path);
 		return;
 	}
 		
 	/* so we have to scan */
+	newly_covered++;
+	
 	/* root is given like the absolute path regardless of the cur_dir */
     if (!(dir = opendir(path)))
 	{
@@ -224,8 +233,6 @@ void get_all_subdirs(
 
 	/* and change to this directory */
 	chdir(path);
-
-
  
     used = 0;
     alloc = 50;
@@ -340,7 +347,13 @@ void CleanExit(int sig)
 
     puts("\n\n=============================================================");
     printf("put results here\n");
-	
+	printf("there are on average %.2f files\n", GetResult());
+	printf("Not that the last unfinished est_num is counted as finished\n");
+	printf("Thus the correct result should be higher than the above value\n");
+	printf("\ndirs newly opened %ld\ndirs already_covered %ld\n",
+			newly_covered, already_covered);
+	printf("\"Note that the newly opened dirs should not exceed the total \
+number of directories existing there\"\n");
     puts("\n\n=============================================================");
     printf("Total Time:%ld milliseconds\n", 
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);

@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 	for (i=0; i < sample_times; i++)
 	{
 		begin_sample_from(argv[2], curPtr, 1.0);
-		printf("there are on average %.2f files\n", GetResult());
+		//printf("there are on average %.2f files\n", GetResult());
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
@@ -167,14 +167,18 @@ int begin_sample_from(
 		
         est_total = est_total + (sub_file_num / prob);
 
+	if (sub_file_num > 100000)
+	       { printf("current dir:%s\n", get_current_dir_name());
+		printf("%d\n", sub_file_num);}
 		if (sub_dir_num > 0)
 		{
 			prob = prob / sub_dir_num;
-			
 			if (prob < old_prob / 10000)
 			{
 				int i;
-				printf("test!!!!!!");
+				//printf("test!!!!!!");
+				//printf("\nprob%f, old_prob%f\n",
+				//	prob, old_prob);
 				for (i = 0; i < 100; i++)
 				{
 					begin_sample_from(get_current_dir_name(), 
@@ -233,6 +237,7 @@ void get_all_subdirs(
 		/* This change dir is really important */
 		already_covered++;
 		chdir(path);
+		printf("cur dir:%s\n", get_current_dir_name());
 		return;
 	}
 		
@@ -251,6 +256,7 @@ void get_all_subdirs(
 	/* and change to this directory */
 	chdir(path);
  
+	printf("cur dir:%s\n", get_current_dir_name());
     used = 0;
     alloc = 50;
     if (!(curPtr->sdirStruct
@@ -335,7 +341,7 @@ error:
 
 double GetResult()
 {
-	printf("est_total:%.2f, est_num:%.2f\n", est_total, est_num);
+	//printf("est_total:%.2f, est_num:%.2f\n", est_total, est_num);
     return (est_total / est_num);
 }
 

@@ -33,12 +33,13 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
+int global_dq_times;
 
 /* New struct for saving history */
 struct dir_node
 {
-	int sub_file_num;
-	int sub_dir_num;
+	long int sub_file_num;
+	long int sub_dir_num;
 	
 	int bool_dir_covered;
 	char *dir_name;				/* rather than store the subdir name */
@@ -54,11 +55,8 @@ double GetResult();
 int begin_sample_from(const char *root, struct dir_node *, double);
 int random_next(int random_bound);
 int check_type(const struct dirent *entry);
-void fast_subdirs(   
-    const char *path,               /* path name of the parent dir */
-    struct dir_node *curPtr,  /* */
-	int *sub_dir_num,		        /* number of sub dirs */
-	int *sub_file_num);		        /* number of sub files */
+void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
+   long int *sub_file_num);		       
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
 char *get_current_dir_name(void);
@@ -113,7 +111,6 @@ int main(int argc, char **argv)
 	for (i=0; i < sample_times; i++)
 	{
 		begin_sample_from(argv[2], curPtr, 1.0);
-		//printf("there are on average %.2f files\n", GetResult());
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
@@ -138,8 +135,8 @@ int begin_sample_from(
 		struct dir_node *curPtr,
 		double old_prob) 
 {
-	int sub_dir_num = 0;
-	int sub_file_num = 0;
+	long int sub_dir_num = 0;
+	long int sub_file_num = 0;
 		
     //string curDict = dirstr;
 	/* designate the current directory where sampling is to happen */
@@ -173,30 +170,30 @@ int begin_sample_from(
 		sub_file_num = curPtr->sub_file_num;
 		
         est_total = est_total + (sub_file_num / prob);
+		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
+		    files to est_total\n",
+		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
 
-	//if (sub_file_num > 100000)
-	       //{ //printf("current dir:%s\n", get_current_dir_name());
-		//printf("%d\n", sub_file_num);}
 		if (sub_dir_num > 0)
 		{
 			prob = prob / sub_dir_num;
 			if (prob < old_prob / 10000)
 			{
-				/*int i;
-				//printf("test!!!!!!");
-				//printf("\nprob%f, old_prob%f\n",
-				//	prob, old_prob);
-				for (i = 0; i < 100; i++)
+				int i;
+				printf("test!!!!!!\n");
+		
+				for (i = 0; i < 10; i++)
 				{
+					printf("in D&Q %s\n", get_current_dir_name());
 					begin_sample_from(get_current_dir_name(), 
 					    curPtr,
-					    prob*100);
+					    prob*10);
 				}
 				if (((int) old_prob) == 1)
 					est_num++;
 				chdir(sample_root);
 				bool_sdone = 1;
-				continue;*/
+				continue;
 			}
 			
 			int temp = random_next(sub_dir_num);
@@ -331,19 +328,6 @@ void get_all_subdirs(
 	curPtr->bool_dir_covered = 1;
     closedir(dir);
 
-	 /* previous approach to prevent memory leak  
-error_free:
-    while (used--) 
-	{
-        free(s_dirs[used]);
-    }
-    free(s_dirs);
- 
-error_close:
-    closedir(dir);
- 
-error:
-    return NULL;   */
 }
 
 double GetResult()
@@ -394,8 +378,8 @@ number of directories existing there\"\n");
 void fast_subdirs(   
     const char *path,               /* path name of the parent dir */
     struct dir_node *curPtr,  /* */
-	int *sub_dir_num,		        /* number of sub dirs */
-	int *sub_file_num)		        /* number of sub files */
+	long int *sub_dir_num,		        /* number of sub dirs */
+	long int *sub_file_num)		        /* number of sub files */
 {
     struct dirent **namelist;
     
@@ -410,17 +394,15 @@ void fast_subdirs(
 		/* This change dir is really important */
 		already_covered++;
 		chdir(path);
-		//printf("cur dir:%s\n", get_current_dir_name());
+
 		return;
 	}
 		
 	/* so we have to scan */
-	newly_covered++;
-	
-	//printf("current dir:%s\n", get_current_dir_name());	
+	newly_covered++;	
+
     total_num = scandir(path, &namelist, 0, 0);
 	
-	//rewinddir(path);
 	/* root is given like the absolute path regardless of the cur_dir */
     (*sub_dir_num) = scandir(path, &namelist, check_type, 0);
 	chdir(path);
@@ -428,7 +410,7 @@ void fast_subdirs(
 	*sub_file_num = total_num - *sub_dir_num;
  	alloc = *sub_dir_num - 2;
 	used = 0;
-	//printf("cur dir:%s\n", get_current_dir_name());
+
  	assert(alloc >= 0);
 
     if (alloc > 0 && !(curPtr->sdirStruct
@@ -457,22 +439,10 @@ void fast_subdirs(
 
 	curPtr->sub_file_num = *sub_file_num;
 	curPtr->sub_dir_num = *sub_dir_num;
+	
 	/* update bool_dir_covered info */
 	curPtr->bool_dir_covered = 1;
 
-	 /* previous approach to prevent memory leak  
-error_free:
-    while (used--) 
-	{
-        free(s_dirs[used]);
-    }
-    free(s_dirs);
- 
-error_close:
-    closedir(dir);
- 
-error:
-    return NULL;   */
 }
 int check_type(const struct dirent *entry)
 {

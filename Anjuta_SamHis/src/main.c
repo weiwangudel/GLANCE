@@ -53,6 +53,12 @@ static char *dup_str(const char *s);
 double GetResult();
 int begin_sample_from(const char *root, struct dir_node *, double);
 int random_next(int random_bound);
+int check_type(const struct dirent *entry);
+void fast_subdirs(   
+    const char *path,               /* path name of the parent dir */
+    struct dir_node *curPtr,  /* */
+	int *sub_dir_num,		        /* number of sub dirs */
+	int *sub_file_num);		        /* number of sub files */
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
 char *get_current_dir_name(void);
@@ -154,22 +160,23 @@ int begin_sample_from(
 		 * absolute path(the first call of this function under begin_sample_from
 		 * or relative path, the subsequent call of that 
 		 */
-		get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
+		//get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
+		fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
 
 		/* sdirStruct should not be null! */
-		if (!curPtr->sdirStruct)
+		/*if (!curPtr->sdirStruct)
 		{
 			fprintf(stderr, "something went wrong in getting dirs\n");
 			return EXIT_FAILURE;
-		}                  
+		}    */              
         sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
 		
         est_total = est_total + (sub_file_num / prob);
 
-	if (sub_file_num > 100000)
-	       { printf("current dir:%s\n", get_current_dir_name());
-		printf("%d\n", sub_file_num);}
+	//if (sub_file_num > 100000)
+	       //{ //printf("current dir:%s\n", get_current_dir_name());
+		//printf("%d\n", sub_file_num);}
 		if (sub_dir_num > 0)
 		{
 			prob = prob / sub_dir_num;
@@ -382,5 +389,96 @@ number of directories existing there\"\n");
     printf("Total Time:%ld seconds\n", 
 	(end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
     exit(0);
+}
+
+void fast_subdirs(   
+    const char *path,               /* path name of the parent dir */
+    struct dir_node *curPtr,  /* */
+	int *sub_dir_num,		        /* number of sub dirs */
+	int *sub_file_num)		        /* number of sub files */
+{
+    struct dirent **namelist;
+    
+    size_t alloc;
+    int total_num;
+	int used = 0;
+
+	/* already stored the subdirs struct before
+	 * no need to scan the dir again */
+	if (curPtr->bool_dir_covered == 1)
+	{
+		/* This change dir is really important */
+		already_covered++;
+		chdir(path);
+		printf("cur dir:%s\n", get_current_dir_name());
+		return;
+	}
+		
+	/* so we have to scan */
+	newly_covered++;
+	
+	printf("current dir:%s\n", get_current_dir_name());	
+    total_num = scandir(path, &namelist, 0, 0);
+	
+	//rewinddir(path);
+	/* root is given like the absolute path regardless of the cur_dir */
+    (*sub_dir_num) = scandir(path, &namelist, check_type, 0);
+	chdir(path);
+	
+	*sub_file_num = total_num - *sub_dir_num;
+ 	alloc = *sub_dir_num - 2;
+	used = 0;
+	printf("cur dir:%s\n", get_current_dir_name());
+ 	assert(alloc >= 0);
+
+    if (alloc > 0 && !(curPtr->sdirStruct
+			= malloc(alloc * sizeof (struct dir_node)) )) 
+	{
+        //goto error_close;
+		printf("malloc error!\n");
+		exit(-1);
+    }
+    
+    int temp = 0;
+	/* scan the namelist */
+    for (temp = 0; temp < *sub_dir_num; temp++)
+    {
+		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
+                        (strcmp(namelist[temp]->d_name, "..") == 0))
+               continue;
+   		if (!(curPtr->sdirStruct[used++].dir_name = dup_str(namelist[temp]->d_name))) 
+		{
+			printf("get name error!!!!\n");
+    	}
+		
+	}
+
+	*sub_dir_num -= 2;
+
+	curPtr->sub_file_num = *sub_file_num;
+	curPtr->sub_dir_num = *sub_dir_num;
+	/* update bool_dir_covered info */
+	curPtr->bool_dir_covered = 1;
+
+	 /* previous approach to prevent memory leak  
+error_free:
+    while (used--) 
+	{
+        free(s_dirs[used]);
+    }
+    free(s_dirs);
+ 
+error_close:
+    closedir(dir);
+ 
+error:
+    return NULL;   */
+}
+int check_type(const struct dirent *entry)
+{
+    if (entry->d_type == DT_DIR)
+        return 1;
+    else
+        return 0;
 }
 

@@ -410,7 +410,7 @@ void fast_subdirs(
 		/* This change dir is really important */
 		already_covered++;
 		chdir(path);
-		printf("cur dir:%s\n", get_current_dir_name());
+		//printf("cur dir:%s\n", get_current_dir_name());
 		return;
 	}
 		

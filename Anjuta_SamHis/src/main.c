@@ -182,7 +182,7 @@ int begin_sample_from(
 			prob = prob / sub_dir_num;
 			if (prob < old_prob / 10000)
 			{
-				int i;
+				/*int i;
 				//printf("test!!!!!!");
 				//printf("\nprob%f, old_prob%f\n",
 				//	prob, old_prob);
@@ -196,7 +196,7 @@ int begin_sample_from(
 					est_num++;
 				chdir(sample_root);
 				bool_sdone = 1;
-				continue;
+				continue;*/
 			}
 			
 			int temp = random_next(sub_dir_num);

@@ -244,7 +244,7 @@ void get_all_subdirs(
 		/* This change dir is really important */
 		already_covered++;
 		chdir(path);
-		printf("cur dir:%s\n", get_current_dir_name());
+		//printf("cur dir:%s\n", get_current_dir_name());
 		return;
 	}
 		
@@ -254,7 +254,7 @@ void get_all_subdirs(
 	/* root is given like the absolute path regardless of the cur_dir */
     if (!(dir = opendir(path)))
 	{
-		printf("current dir %s\n", get_current_dir_name());
+		//printf("current dir %s\n", get_current_dir_name());
 		printf("error opening dir %s\n", path);
         //goto error;
 		exit(-1);
@@ -263,7 +263,7 @@ void get_all_subdirs(
 	/* and change to this directory */
 	chdir(path);
  
-	printf("cur dir:%s\n", get_current_dir_name());
+	//printf("cur dir:%s\n", get_current_dir_name());
     used = 0;
     alloc = 50;
     if (!(curPtr->sdirStruct
@@ -417,7 +417,7 @@ void fast_subdirs(
 	/* so we have to scan */
 	newly_covered++;
 	
-	printf("current dir:%s\n", get_current_dir_name());	
+	//printf("current dir:%s\n", get_current_dir_name());	
     total_num = scandir(path, &namelist, 0, 0);
 	
 	//rewinddir(path);
@@ -428,7 +428,7 @@ void fast_subdirs(
 	*sub_file_num = total_num - *sub_dir_num;
  	alloc = *sub_dir_num - 2;
 	used = 0;
-	printf("cur dir:%s\n", get_current_dir_name());
+	//printf("cur dir:%s\n", get_current_dir_name());
  	assert(alloc >= 0);
 
     if (alloc > 0 && !(curPtr->sdirStruct

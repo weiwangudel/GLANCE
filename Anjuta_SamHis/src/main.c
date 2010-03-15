@@ -413,6 +413,7 @@ void CleanExit(int sig)
 	printf("\"Note that the newly opened dirs should not exceed the total \
 number of directories existing there\"\n");
 	printf("there are on average %.2f files\n", GetResult()+GetLargeValue ());
+	printf("large dir has in all %.2f files\n", GetLargeValue ());
     puts("=============================================================");
     printf("Total Time:%ld milliseconds\n", 
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);

@@ -195,7 +195,7 @@ int begin_sample_from(
 	double prob = old_prob;
 	double temp_prob; 
 		
-    while (bool_sdone != 1 && depth <= 10)
+    while (bool_sdone != 1)
     {
 		sub_dir_num = 0;
 		sub_file_num = 0;

@@ -25,7 +25,7 @@
 #include <time.h>		/* time() */
 #include <assert.h>     /* assert()*/
 
-#define MAX_INT 65535
+#define MAX_DRILL_DOWN 1000000
 
 struct timeval start;
 struct timeval end;
@@ -42,6 +42,7 @@ struct dir_node
 	long int sub_dir_num;
 	
 	int bool_dir_covered;
+	int bool_large_dir; 	  /* the dir has very large amount of files */
 	char *dir_name;				/* rather than store the subdir name */
 	struct dir_node *sdirStruct; /* child array dynamically allocated */
 };
@@ -63,8 +64,8 @@ char *get_current_dir_name(void);
 
 int main(int argc, char **argv) 
 {
-	unsigned int sample_times;
-	size_t i;
+	long int sample_times;
+	long int i;
 	struct dir_node *curPtr;
 	struct dir_node root;
 	
@@ -89,8 +90,8 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE; 
 	}
 
-	sample_times = atoi(argv[1]);
-	assert(sample_times <= MAX_INT);
+	sample_times = atol(argv[1]);
+	assert(sample_times <= MAX_DRILL_DOWN);
 
 	/* initialize the value */
 	{

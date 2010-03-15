@@ -33,8 +33,9 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
-long int g_boundary_num = 100000;
-int g_dq_times;		/* reserved for command option use */
+long int g_boundary_num = 10000;
+int g_dq_times;		/* dq iteration loop */
+long int g_dq_threshold;  /* dq threshold */
 int g_large_used =0; /* large directory encountered  */
 int g_large_alloc = 10; /* large directory initially allocated */
 long int *g_large_array;  /* Stores the large array */ 
@@ -96,7 +97,8 @@ int main(int argc, char **argv)
 
 	sample_times = atol(argv[1]);
 	assert(sample_times <= MAX_DRILL_DOWN);
-
+	g_dq_threshold = atol(argv[3]);
+	g_dq_times = atoi(argv[4]);
 	/* initialize the value */
 	{
         est_total = 0;
@@ -184,16 +186,16 @@ int begin_sample_from(
 		{
 			temp_prob = prob / sub_dir_num;
 			
-			if (temp_prob < old_prob / 10000)
+			if (temp_prob < old_prob / g_dq_threshold)
 			{
 				int i;
-				printf("test!!!!!!\n");
+				//printf("test!!!!!!\n");
 
-				for (i = 0; i < 10; i++)			
+				for (i = 0; i < g_dq_times; i++)			
 				{
-					printf("in D&Q %s\n", get_current_dir_name());
+					//printf("in D&Q %s\n", get_current_dir_name());
 					begin_sample_from(get_current_dir_name(), curPtr,
-					    					    prob*10);
+				    					    prob*g_dq_times);
 				}
 				if (((int) old_prob) == 1)
 					est_num++;

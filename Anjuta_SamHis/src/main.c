@@ -33,7 +33,8 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
-int global_dq_times;
+long int g_boundary_num = 100000;
+int global_dq_times;		/* reserved for command option use */
 
 /* New struct for saving history */
 struct dir_node
@@ -139,11 +140,11 @@ int begin_sample_from(
 	long int sub_dir_num = 0;
 	long int sub_file_num = 0;
 		
-    //string curDict = dirstr;
+
 	/* designate the current directory where sampling is to happen */
 	char *cur_parent = dup_str(sample_root);
 	int bool_sdone = 0;
-    //double prob = 1;
+
 	double prob = old_prob;
 	double temp_prob; 
 		
@@ -170,6 +171,15 @@ int begin_sample_from(
 		}    */              
         sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
+
+		/* anomaly detection */
+		if (sub_file_num > g_boundary_num)
+		{
+			// consider move here to fast_subdir part or a new function
+			
+			
+		}
+		
 		
         est_total = est_total + (sub_file_num / prob);
 		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
@@ -390,6 +400,12 @@ void fast_subdirs(
     int total_num;
 	int used = 0;
 
+	/* not only already covered, I will never come again! */
+	if (curPtr->bool_large_dir == 1)
+	{
+		return;
+	}
+
 	/* already stored the subdirs struct before
 	 * no need to scan the dir again */
 	if (curPtr->bool_dir_covered == 1)
@@ -431,7 +447,8 @@ void fast_subdirs(
 		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
                         (strcmp(namelist[temp]->d_name, "..") == 0))
                continue;
-   		if (!(curPtr->sdirStruct[used++].dir_name = dup_str(namelist[temp]->d_name))) 
+   		if (!(curPtr->sdirStruct[used++].dir_name 
+		       = dup_str(namelist[temp]->d_name))) 
 		{
 			printf("get name error!!!!\n");
     	}

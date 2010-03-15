@@ -195,7 +195,7 @@ int begin_sample_from(
 	double prob = old_prob;
 	double temp_prob; 
 		
-    while (bool_sdone != 1)
+    while (bool_sdone != 1 && depth <= 10)
     {
 		sub_dir_num = 0;
 		sub_file_num = 0;
@@ -245,6 +245,7 @@ int begin_sample_from(
 			curPtr = &curPtr ->sdirStruct[temp];	
 
 			depth++;
+				
 		}
 		
 		/* leaf directory, end the drill down */
@@ -254,11 +255,12 @@ int begin_sample_from(
 				est_num++;
 
 			/* finishing this drill down, set the direcotry back */
-			chdir(sample_root);
+			//chdir(sample_root);
 			bool_sdone = 1;
 			
         }
     } 
+	chdir(sample_root);
     return depth;
 }
 

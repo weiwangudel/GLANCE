@@ -67,6 +67,8 @@ int check_type(const struct dirent *entry);
 void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
    long int *sub_file_num);
 void anomaly_processing(struct dir_node *curPtr);
+void get_min_max(struct timeval begin, struct timeval end,
+    	long int *min, long int *max);
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
 char *get_current_dir_name(void);
@@ -140,10 +142,9 @@ int main(int argc, char **argv)
 	chdir("/tmp");	  /* this is for the output of gprof */
 
 	/* Exit and Display Statistic */
-	CleanExit (2);
-
 	printf("Min drill down time:%ld microseconds\n", sample_min);
 	printf("Max drill down time:%ld microseconds\n", sample_max);
+	CleanExit (2);
 
 	return EXIT_SUCCESS;
 }
@@ -154,10 +155,10 @@ void get_min_max(struct timeval begin, struct timeval end,
 	long int temp;
 	temp = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec);
 
-	if (temp > max)
-		max = temp;
-	if (temp < min)
-		min = temp;    
+	if (temp > *max)
+		*max = temp;
+	if (temp < *min)
+		*min = temp;    
 }
 
 int random_next(int random_bound)

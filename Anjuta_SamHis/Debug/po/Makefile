@@ -23,10 +23,10 @@ VERSION = 0.1
 
 SHELL = /bin/sh
 
-srcdir = /home/wei/Desktop/sample_history/Anjuta_SamHis/po
-top_srcdir = /home/wei/Desktop/sample_history/Anjuta_SamHis
+srcdir = /home/weiwang/Desktop/sample_history/Anjuta_SamHis/po
+top_srcdir = /home/weiwang/Desktop/sample_history/Anjuta_SamHis
 top_builddir = ..
-VPATH = /home/wei/Desktop/sample_history/Anjuta_SamHis/po
+VPATH = /home/weiwang/Desktop/sample_history/Anjuta_SamHis/po
 
 prefix = /usr/local
 exec_prefix = ${prefix}
@@ -36,7 +36,7 @@ libdir = ${exec_prefix}/lib
 DATADIRNAME = share
 itlocaledir = $(prefix)/$(DATADIRNAME)/locale
 subdir = po
-install_sh = ${SHELL} /home/wei/Desktop/sample_history/Anjuta_SamHis/install-sh
+install_sh = ${SHELL} /home/weiwang/Desktop/sample_history/Anjuta_SamHis/install-sh
 # Automake >= 1.8 provides /bin/mkdir -p.
 # Until it can be supposed, use the safe fallback:
 mkdir_p = $(install_sh) -d
@@ -66,7 +66,7 @@ DISTFILES = Makefile.in.in POTFILES.in $(POFILES)
 EXTRA_DISTFILES = ChangeLog POTFILES.skip Makevars LINGUAS
 
 POTFILES = \
-	/home/wei/Desktop/sample_history/Anjuta_SamHis/src/main.c
+	/home/weiwang/Desktop/sample_history/Anjuta_SamHis/src/main.c
 
 CATALOGS=$(shell LINGUAS="$(USE_LINGUAS)"; for lang in $$LINGUAS; do printf "$$lang.gmo "; done)
 

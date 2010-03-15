@@ -27,7 +27,7 @@ main.o: /home/weiwang/Desktop/sample_history/Anjuta_SamHis/src/main.c \
  /usr/include/bits/sigstack.h /usr/include/bits/sigthread.h \
  /usr/include/sys/stat.h /usr/include/bits/stat.h /usr/include/unistd.h \
  /usr/include/bits/posix_opt.h /usr/include/bits/confname.h \
- /usr/include/getopt.h /usr/include/assert.h
+ /usr/include/getopt.h /usr/include/sys/time.h /usr/include/assert.h
 
 /usr/include/stdio.h:
 
@@ -146,5 +146,7 @@ main.o: /home/weiwang/Desktop/sample_history/Anjuta_SamHis/src/main.c \
 /usr/include/bits/confname.h:
 
 /usr/include/getopt.h:
+
+/usr/include/sys/time.h:
 
 /usr/include/assert.h:

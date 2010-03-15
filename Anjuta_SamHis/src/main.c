@@ -61,7 +61,8 @@ int begin_sample_from(const char *root, struct dir_node *, double);
 int random_next(int random_bound);
 int check_type(const struct dirent *entry);
 void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
-   long int *sub_file_num);		       
+   long int *sub_file_num);
+void anomaly_processing(struct dir_node *curPtr);
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
 char *get_current_dir_name(void);
@@ -107,6 +108,13 @@ int main(int argc, char **argv)
 	curPtr = &root;
 	curPtr->bool_dir_covered = 0;
 	curPtr->sdirStruct = NULL;
+
+	/* Initialize the global large array */
+	if (!(g_large_array = malloc(g_large_alloc * sizeof (long int)) ))
+	{
+		printf("malloc g_large_array error!\n");
+		exit(-1);
+	}
 	
 	srand((int)time(0));//different seed number for random function
 	//srand can also be used like this
@@ -156,22 +164,10 @@ int begin_sample_from(
 		sub_dir_num = 0;
 		sub_file_num = 0;
 
-		/* get all sub_dirs struct allocated and organized in to an array
-		 * and curPtr's sdirStruct pointer already points to it 
-		 * after the execution of the get_all_subdirs ()
-		 * current directory is changed to cur_parent, either from
-		 * absolute path(the first call of this function under begin_sample_from
-		 * or relative path, the subsequent call of that 
-		 */
-		//get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
 		fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
 
-		/* sdirStruct should not be null! */
-		/*if (!curPtr->sdirStruct)
-		{
-			fprintf(stderr, "something went wrong in getting dirs\n");
-			return EXIT_FAILURE;
-		}    */              
+		/* sdirStruct not null sounds not necessary to check! */
+		/*if (!curPtr->sdirStruct) */              
         
 		/* anomaly detection */
 		anomaly_processing(curPtr);
@@ -231,15 +227,30 @@ void anomaly_processing(struct dir_node *curPtr)
 {
 	if (curPtr->sub_file_num > g_boundary_num)
 	{
-		// consider move here to fast_subdir part or a new function
 		curPtr->bool_large_dir = 1;
 
 		/* record the large sub_file_num then set it to 0 */
+		if (g_large_used + 1 >= g_large_alloc)
+		{
+			size_t new = g_large_alloc /2 *3;
+			long int *tmp = 
+				realloc(g_large_array, new * sizeof (long int));
+			if (!tmp)
+			{
+				printf("Realloc g_large_array error!\n");
+				exit(-1);
+			}
+
+			g_large_array = tmp;
+			g_large_alloc = new;
+		}
+
+		/* store sub_file_num to array */
+		g_large_array[g_large_used] = curPtr->sub_file_num;
 		
-			
+		++g_large_used;	
 		curPtr->sub_file_num = 0;
-	}
-	
+	}	
 }
 
 /* Before the calling of the function, please ensure you have 
@@ -362,6 +373,15 @@ double GetResult()
     return (est_total / est_num);
 }
 
+double GetLargeValue()
+{
+	size_t i;
+	double sum_file_num = 0;
+	for (i = 0; i < g_large_used; i++)
+		sum_file_num += g_large_array[i];
+	return sum_file_num;	
+}
+
 
 static char *dup_str(const char *s) 
 {
@@ -392,7 +412,7 @@ void CleanExit(int sig)
 			newly_covered, already_covered);
 	printf("\"Note that the newly opened dirs should not exceed the total \
 number of directories existing there\"\n");
-	printf("there are on average %.2f files\n", GetResult());
+	printf("there are on average %.2f files\n", GetResult()+GetLargeValue ());
     puts("=============================================================");
     printf("Total Time:%ld milliseconds\n", 
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);

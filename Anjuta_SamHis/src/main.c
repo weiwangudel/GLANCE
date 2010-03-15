@@ -177,9 +177,9 @@ int begin_sample_from(
 
 
 	    est_total = est_total + (sub_file_num / prob);
-		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
+		/*printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
 		    files to est_total\n",
-		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
+		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);*/
 
 		if (sub_dir_num > 0)
 		{

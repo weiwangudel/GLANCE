@@ -46,7 +46,6 @@ struct dir_node
 	long int sub_dir_num;
 	
 	int bool_dir_covered;
-	int bool_large_dir; 	  /* the dir has very large amount of files */
 	char *dir_name;				/* rather than store the subdir name */
 	struct dir_node *sdirStruct; /* child array dynamically allocated */
 };
@@ -227,8 +226,6 @@ void anomaly_processing(struct dir_node *curPtr)
 {
 	if (curPtr->sub_file_num > g_boundary_num)
 	{
-		curPtr->bool_large_dir = 1;
-
 		/* record the large sub_file_num then set it to 0 */
 		if (g_large_used + 1 >= g_large_alloc)
 		{
@@ -433,12 +430,6 @@ void fast_subdirs(
     size_t alloc;
     int total_num;
 	int used = 0;
-
-	/* not only already covered, I will never come again! */
-	if (curPtr->bool_large_dir == 1)
-	{
-		return;
-	}
 
 	/* already stored the subdirs struct before
 	 * no need to scan the dir again */

@@ -30,9 +30,6 @@
 struct timeval start;
 struct timeval end;
 
-struct timeval sample_start;
-struct timeval sample_end;
-
 double est_total;
 double est_num;
 long int already_covered = 0;
@@ -67,7 +64,7 @@ int check_type(const struct dirent *entry);
 void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
    long int *sub_file_num);
 void anomaly_processing(struct dir_node *curPtr);
-void get_min_max(struct timeval begin, struct timeval end,
+long int get_min_max(struct timeval begin, struct timeval end,
     	long int *min, long int *max);
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
@@ -81,6 +78,8 @@ int main(int argc, char **argv)
 	struct dir_node root;
 	long int sample_min = 10000000; /* 10 seconds */
 	long int sample_max = 0;
+	struct timeval sample_start;
+	struct timeval sample_end;
 	
 	signal(SIGKILL, CleanExit);
 	signal(SIGTERM, CleanExit);
@@ -128,37 +127,46 @@ int main(int argc, char **argv)
 	srand((int)time(0));//different seed number for random function
 	//srand can also be used like this
 	//srand(2); 
+
+	int * depth_array = malloc(sample_times * sizeof (int));
+	long int * time_array = malloc (sample_times * sizeof (long int ));
 	
 	/* start sampling */
 	for (i=0; i < sample_times; i++)
-	{
+	{		
 		gettimeofday(&sample_start, NULL);
-		begin_sample_from(argv[2], curPtr, 1.0);
+		depth_array[i] = begin_sample_from(argv[2], curPtr, 1.0);
 		gettimeofday(&sample_end, NULL);		
 
-		get_min_max(sample_start, sample_end, &sample_min, &sample_max);
+		time_array[i] =
+			get_min_max(sample_start, sample_end, &sample_min, &sample_max);
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
 
 	/* Exit and Display Statistic */
-	printf("Min drill down time:%ld microseconds\n", sample_min);
-	printf("Max drill down time:%ld microseconds\n", sample_max);
+//	printf("Min drill down time:%ld microseconds\n", sample_min);
+	//printf("Max drill down time:%ld microseconds\n", sample_max);
+
+	for (i=0; i < sample_times; i++)
+		printf("%ld\t%d\t%ld\n", i, depth_array[i], time_array[i]);
 	CleanExit (2);
 
 	return EXIT_SUCCESS;
 }
 
-void get_min_max(struct timeval begin, struct timeval end,
+long int get_min_max(struct timeval sample_begin, struct timeval sample_end,
     	long int *min, long int *max)
 {
 	long int temp;
-	temp = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec);
-
+	temp = (sample_end.tv_sec-sample_begin.tv_sec)*1000000
+		+ (sample_end.tv_usec-sample_begin.tv_usec);
+	
 	if (temp > *max)
 		*max = temp;
 	if (temp < *min)
-		*min = temp;    
+		*min = temp;
+	return temp;
 }
 
 int random_next(int random_bound)
@@ -178,7 +186,7 @@ int begin_sample_from(
 {
 	long int sub_dir_num = 0;
 	long int sub_file_num = 0;
-		
+	int depth = 0;	
 
 	/* designate the current directory where sampling is to happen */
 	char *cur_parent = dup_str(sample_root);
@@ -234,7 +242,9 @@ int begin_sample_from(
 			
 			int temp = random_next(sub_dir_num);
 			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
-			curPtr = &curPtr ->sdirStruct[temp];		
+			curPtr = &curPtr ->sdirStruct[temp];	
+
+			depth++;
 		}
 		
 		/* leaf directory, end the drill down */
@@ -246,9 +256,10 @@ int begin_sample_from(
 			/* finishing this drill down, set the direcotry back */
 			chdir(sample_root);
 			bool_sdone = 1;
+			
         }
     } 
-    return EXIT_SUCCESS;
+    return depth;
 }
 
 void anomaly_processing(struct dir_node *curPtr)

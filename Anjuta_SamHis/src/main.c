@@ -34,7 +34,7 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
-long int g_boundary_num = 10000;
+long int g_boundary_num = 1000000;
 int g_dq_times;		/* dq iteration loop */
 long int g_dq_threshold;  /* dq threshold */
 int g_large_used =0; /* large directory encountered  */
@@ -63,7 +63,7 @@ int random_next(int random_bound);
 int check_type(const struct dirent *entry);
 void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
    long int *sub_file_num);
-void anomaly_processing(struct dir_node *curPtr);
+void anomaly_processing(struct dir_node *curPtr, double prob);
 long int get_min_max(struct timeval begin, struct timeval end,
     	long int *min, long int *max);
 
@@ -148,8 +148,8 @@ int main(int argc, char **argv)
 //	printf("Min drill down time:%ld microseconds\n", sample_min);
 	//printf("Max drill down time:%ld microseconds\n", sample_max);
 
-	for (i=0; i < sample_times; i++)
-		printf("%ld\t%d\t%ld\n", i, depth_array[i], time_array[i]);
+	//for (i=0; i < sample_times; i++)
+		//printf("%ld\t%d\t%ld\n", i, depth_array[i], time_array[i]);
 	CleanExit (2);
 
 	return EXIT_SUCCESS;
@@ -206,16 +206,18 @@ int begin_sample_from(
 		/*if (!curPtr->sdirStruct) */              
         
 		/* anomaly detection */
-		anomaly_processing(curPtr);
+		anomaly_processing(curPtr, prob);
 
 		sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
 
 
 	    est_total = est_total + (sub_file_num / prob);
-		/*printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
+
+		if (sub_file_num / prob > 1000000)
+		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
 		    files to est_total\n",
-		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);*/
+		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
 
 		if (sub_dir_num > 0)
 		{
@@ -264,9 +266,9 @@ int begin_sample_from(
     return depth;
 }
 
-void anomaly_processing(struct dir_node *curPtr)
+void anomaly_processing(struct dir_node *curPtr, double prob)
 {
-	if (curPtr->sub_file_num > g_boundary_num)
+	if (curPtr->sub_file_num > g_boundary_num*prob)
 	{
 		/* record the large sub_file_num then set it to 0 */
 		if (g_large_used + 1 >= g_large_alloc)

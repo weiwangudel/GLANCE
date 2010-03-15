@@ -29,6 +29,10 @@
 
 struct timeval start;
 struct timeval end;
+
+struct timeval sample_start;
+struct timeval sample_end;
+
 double est_total;
 double est_num;
 long int already_covered = 0;
@@ -73,6 +77,8 @@ int main(int argc, char **argv)
 	long int i;
 	struct dir_node *curPtr;
 	struct dir_node root;
+	long int sample_min = 10000000; /* 10 seconds */
+	long int sample_max = 0;
 	
 	signal(SIGKILL, CleanExit);
 	signal(SIGTERM, CleanExit);
@@ -124,14 +130,34 @@ int main(int argc, char **argv)
 	/* start sampling */
 	for (i=0; i < sample_times; i++)
 	{
+		gettimeofday(&sample_start, NULL);
 		begin_sample_from(argv[2], curPtr, 1.0);
+		gettimeofday(&sample_end, NULL);		
+
+		get_min_max(sample_start, sample_end, &sample_min, &sample_max);
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
 
 	/* Exit and Display Statistic */
 	CleanExit (2);
+
+	printf("Min drill down time:%ld microseconds\n", sample_min);
+	printf("Max drill down time:%ld microseconds\n", sample_max);
+
 	return EXIT_SUCCESS;
+}
+
+void get_min_max(struct timeval begin, struct timeval end,
+    	long int *min, long int *max)
+{
+	long int temp;
+	temp = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec);
+
+	if (temp > max)
+		max = temp;
+	if (temp < min)
+		min = temp;    
 }
 
 int random_next(int random_bound)
@@ -418,7 +444,7 @@ number of directories existing there\"\n");
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);
     printf("Total Time:%ld seconds\n", 
 	(end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
-    exit(0);
+	exit(0);
 }
 
 void fast_subdirs(   

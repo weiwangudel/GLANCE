@@ -144,6 +144,7 @@ int begin_sample_from(
 	int bool_sdone = 0;
     //double prob = 1;
 	double prob = old_prob;
+	double temp_prob; 
 		
     while (bool_sdone != 1)
     {
@@ -176,18 +177,18 @@ int begin_sample_from(
 
 		if (sub_dir_num > 0)
 		{
-			prob = prob / sub_dir_num;
-			if (prob < old_prob / 10000)
+			temp_prob = prob / sub_dir_num;
+			
+			if (temp_prob < old_prob / 10000)
 			{
 				int i;
 				printf("test!!!!!!\n");
-		
-				for (i = 0; i < 10; i++)
+
+				for (i = 0; i < 10; i++)			
 				{
 					printf("in D&Q %s\n", get_current_dir_name());
-					begin_sample_from(get_current_dir_name(), 
-					    curPtr,
-					    prob*10);
+					begin_sample_from(get_current_dir_name(), curPtr,
+					    					    prob*10);
 				}
 				if (((int) old_prob) == 1)
 					est_num++;
@@ -195,6 +196,7 @@ int begin_sample_from(
 				bool_sdone = 1;
 				continue;
 			}
+			prob = temp_prob;	
 			
 			int temp = random_next(sub_dir_num);
 			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);

@@ -34,7 +34,10 @@ double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
 long int g_boundary_num = 100000;
-int global_dq_times;		/* reserved for command option use */
+int g_dq_times;		/* reserved for command option use */
+int g_large_used =0; /* large directory encountered  */
+int g_large_alloc = 10; /* large directory initially allocated */
+long int *g_large_array;  /* Stores the large array */ 
 
 /* New struct for saving history */
 struct dir_node
@@ -169,19 +172,15 @@ int begin_sample_from(
 			fprintf(stderr, "something went wrong in getting dirs\n");
 			return EXIT_FAILURE;
 		}    */              
-        sub_dir_num = curPtr->sub_dir_num;
+        
+		/* anomaly detection */
+		anomaly_processing(curPtr);
+
+		sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
 
-		/* anomaly detection */
-		if (sub_file_num > g_boundary_num)
-		{
-			// consider move here to fast_subdir part or a new function
-			
-			
-		}
-		
-		
-        est_total = est_total + (sub_file_num / prob);
+
+	    est_total = est_total + (sub_file_num / prob);
 		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
 		    files to est_total\n",
 		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
@@ -228,6 +227,20 @@ int begin_sample_from(
     return EXIT_SUCCESS;
 }
 
+void anomaly_processing(struct dir_node *curPtr)
+{
+	if (curPtr->sub_file_num > g_boundary_num)
+	{
+		// consider move here to fast_subdir part or a new function
+		curPtr->bool_large_dir = 1;
+
+		/* record the large sub_file_num then set it to 0 */
+		
+			
+		curPtr->sub_file_num = 0;
+	}
+	
+}
 
 /* Before the calling of the function, please ensure you have 
  * already CDed to the right place, so the function can directly

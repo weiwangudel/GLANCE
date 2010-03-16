@@ -61,9 +61,8 @@ double GetResult();
 int begin_sample_from(const char *root, struct dir_node *, double);
 int random_next(int random_bound);
 int check_type(const struct dirent *entry);
-void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
-   long int *sub_file_num);
-void anomaly_processing(struct dir_node *curPtr, double prob);
+void fast_subdirs(const char *, struct dir_node *);
+void anomaly_processing(struct dir_node *curPtr);
 long int get_min_max(struct timeval begin, struct timeval end,
     	long int *min, long int *max);
 
@@ -200,13 +199,11 @@ int begin_sample_from(
 		sub_dir_num = 0;
 		sub_file_num = 0;
 
-		fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
-
-		/* sdirStruct not null sounds not necessary to check! */
-		/*if (!curPtr->sdirStruct) */              
-        
+		fast_subdirs(cur_parent, curPtr);
+		
+       	assert(curPtr != NULL);
 		/* anomaly detection */
-		anomaly_processing(curPtr, prob);
+		anomaly_processing(curPtr);
 
 		sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
@@ -214,10 +211,10 @@ int begin_sample_from(
 
 	    est_total = est_total + (sub_file_num / prob);
 
-		if (sub_file_num / prob > 1000000)
-		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
+		/*if (sub_file_num / prob > 1000000)*/
+		/*printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
 		    files to est_total\n",
-		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
+		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);*/
 
 		if (sub_dir_num > 0)
 		{
@@ -226,11 +223,14 @@ int begin_sample_from(
 			if (temp_prob < old_prob / g_dk_threshold)
 			{
 				int i;
-				//printf("test!!!!!!\n");
+				printf("test!!!!!!\n");
 
 				for (i = 0; i < g_dk_times; i++)			
 				{
-					//printf("in D&Q %s\n", get_current_dir_name());
+					printf("DK dir %s\n", get_current_dir_name());
+					printf("curPtr->dirname:%s, curPtr->sub_file_num:%ld,\
+curPtr->sub_dir_num:%ld\n", curPtr->dir_name, curPtr->sub_dir_num, 
+					    curPtr->sub_file_num);
 					begin_sample_from(get_current_dir_name(), curPtr,
 				    					    prob*g_dk_times);
 				}
@@ -266,9 +266,9 @@ int begin_sample_from(
     return depth;
 }
 
-void anomaly_processing(struct dir_node *curPtr, double prob)
+void anomaly_processing(struct dir_node *curPtr)
 {
-	if (curPtr->sub_file_num > g_boundary_num*prob)
+	if (curPtr->sub_file_num > g_boundary_num)
 	{
 		/* record the large sub_file_num then set it to 0 */
 		if (g_large_used + 1 >= g_large_alloc)
@@ -294,119 +294,6 @@ void anomaly_processing(struct dir_node *curPtr, double prob)
 	}	
 }
 
-/* Before the calling of the function, please ensure you have 
- * already CDed to the right place, so the function can directly
- * open the directory for the whole scanning
- * Open dir requires you give either the absolute path, or the relative path
- * to the current directory (which changes all the time)
- */
-void get_all_subdirs(   
-    const char *path,               /* path name of the parent dir */
-    struct dir_node *curPtr,  /* */
-	int *sub_dir_num,		        /* number of sub dirs */
-	int *sub_file_num)		        /* number of sub files */
-{
-    DIR *dir;
-    struct dirent *pdirent;
-    size_t alloc;
-	size_t used;
- 	struct stat f_ftime;  /* distinguish files from directories */
-
-	/* already stored the subdirs struct before
-	 * no need to scan the dir again */
-	if (curPtr->bool_dir_covered == 1)
-	{
-		/* This change dir is really important */
-		already_covered++;
-		chdir(path);
-		//printf("cur dir:%s\n", get_current_dir_name());
-		return;
-	}
-		
-	/* so we have to scan */
-	newly_covered++;
-	
-	/* root is given like the absolute path regardless of the cur_dir */
-    if (!(dir = opendir(path)))
-	{
-		//printf("current dir %s\n", get_current_dir_name());
-		printf("error opening dir %s\n", path);
-        //goto error;
-		exit(-1);
-    }
-
-	/* and change to this directory */
-	chdir(path);
- 
-	//printf("cur dir:%s\n", get_current_dir_name());
-    used = 0;
-    alloc = 50;
-    if (!(curPtr->sdirStruct
-			= malloc(alloc * sizeof (struct dir_node)) )) 
-	{
-        //goto error_close;
-		printf("malloc error!\n");
-		exit(-1);
-    }
-
-	/* scan the directory */
-    while ((pdirent = readdir(dir))) 
-	{
-		if(strcmp(pdirent->d_name, ".") == 0 ||
-				    strcmp(pdirent->d_name, "..") == 0) 
-		  continue;
-		
-		if(stat(pdirent->d_name, &f_ftime) != 0) 
-		{   
-			printf("stat error\n");			
-			return;
-		}
-		/* currently only deal with regular file and directory 
-		 * are there any other kind ?
-		 */
-		if (S_ISREG(f_ftime.st_mode))
-			(*sub_file_num)++;
-
-		/* record the sub direcotry names 
-		 * this would contain the hidden files begin with "."
-		 */
-		else if (S_ISDIR(f_ftime.st_mode)) 
-		{
-    		if (used + 1 >= alloc) 
-			{
-        		size_t new = alloc / 2 * 3;
-        		struct dir_node *tmp = 
-					realloc(curPtr->sdirStruct, new * sizeof (struct dir_node));
-        		if (!tmp) 
-				{
-            		//goto error_free;
-					printf("realloc error!\n");
-					exit(-1);
-        		}
-        		curPtr->sdirStruct = tmp;
-        		alloc = new;
-    		}
-    		if (!(curPtr->sdirStruct[used].dir_name = dup_str(pdirent->d_name))) 
-			{
-        		//goto error_free;
-				printf("get name error!!!!\n");
-    		}
-    		++used;
-		}
-
-		/* other non-file, non-dir special files */
-		else 
-			continue;
-	}
-	*sub_dir_num = used;
-
-	curPtr->sub_file_num = *sub_file_num;
-	curPtr->sub_dir_num = *sub_dir_num;
-	/* update bool_dir_covered info */
-	curPtr->bool_dir_covered = 1;
-    closedir(dir);
-
-}
 
 double GetResult()
 {
@@ -465,15 +352,15 @@ number of directories existing there\"\n");
 
 void fast_subdirs(   
     const char *path,               /* path name of the parent dir */
-    struct dir_node *curPtr,  /* */
-	long int *sub_dir_num,		        /* number of sub dirs */
-	long int *sub_file_num)		        /* number of sub files */
+    struct dir_node *curPtr)
 {
     struct dirent **namelist;
     
     size_t alloc;
-    int total_num;
-	int used = 0;
+	long int total_num;
+	long int local_sdir_num;
+	long int local_sfile_num;
+	long int used = 0;
 
 	/* already stored the subdirs struct before
 	 * no need to scan the dir again */
@@ -492,26 +379,26 @@ void fast_subdirs(
     total_num = scandir(path, &namelist, 0, 0);
 	
 	/* root is given like the absolute path regardless of the cur_dir */
-    (*sub_dir_num) = scandir(path, &namelist, check_type, 0);
+    local_sdir_num = scandir(path, &namelist, check_type, 0);
 	chdir(path);
 	
-	*sub_file_num = total_num - *sub_dir_num;
- 	alloc = *sub_dir_num - 2;
+	local_sfile_num = total_num - local_sdir_num;
+ 	alloc = local_sdir_num - 2;
 	used = 0;
 
  	assert(alloc >= 0);
 
-    if (alloc > 0 && !(curPtr->sdirStruct
+    if (!(curPtr->sdirStruct
 			= malloc(alloc * sizeof (struct dir_node)) )) 
 	{
-        //goto error_close;
 		printf("malloc error!\n");
 		exit(-1);
     }
     
-    int temp = 0;
+    long int temp = 0;
+	
 	/* scan the namelist */
-    for (temp = 0; temp < *sub_dir_num; temp++)
+    for (temp = 0; temp < local_sdir_num; temp++)
     {
 		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
                         (strcmp(namelist[temp]->d_name, "..") == 0))
@@ -524,10 +411,10 @@ void fast_subdirs(
 		
 	}
 
-	*sub_dir_num -= 2;
+	local_sdir_num -= 2;
 
-	curPtr->sub_file_num = *sub_file_num;
-	curPtr->sub_dir_num = *sub_dir_num;
+	curPtr->sub_file_num = local_sfile_num;
+	curPtr->sub_dir_num = local_sdir_num;
 	
 	/* update bool_dir_covered info */
 	curPtr->bool_dir_covered = 1;

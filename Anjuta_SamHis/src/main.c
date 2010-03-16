@@ -34,7 +34,7 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
-long int g_boundary_num = 1000000;
+long int g_boundary_num = 1000000000;
 int g_dq_times;		/* dq iteration loop */
 long int g_dq_threshold;  /* dq threshold */
 int g_large_used =0; /* large directory encountered  */
@@ -61,8 +61,8 @@ double GetResult();
 int begin_sample_from(const char *root, struct dir_node *, double);
 int random_next(int random_bound);
 int check_type(const struct dirent *entry);
-void fast_subdirs(const char *, struct dir_node *, long int *sub_dir_num, 
-   long int *sub_file_num);
+void fast_subdirs(const char *, struct dir_node *);
+//, long int *sub_dir_num,    long int *sub_file_num);
 void anomaly_processing(struct dir_node *curPtr, double prob);
 long int get_min_max(struct timeval begin, struct timeval end,
     	long int *min, long int *max);
@@ -124,8 +124,8 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	int seed;
-	//srand(seed = (int)time(0));//different seed number for random function
-	srand(1268762958);
+	srand(seed = (int)time(0));//different seed number for random function
+	//srand(1268762958);
 	//srand can also be used like this
 	//srand(2); 
 	printf("seed%d\n", seed);
@@ -176,6 +176,8 @@ int random_next(int random_bound)
 	return rand() % random_bound;	
 }
 
+int level = 0;
+
 /* to ensure accuray, the root parameter should be passed as 
  * absolute!!!! path, so every return would 
  * start from the correct place
@@ -185,8 +187,6 @@ int begin_sample_from(
 		struct dir_node *curPtr,
 		double old_prob) 
 {
-	long int sub_dir_num = 0;
-	long int sub_file_num = 0;
 	int depth = 0;	
 
 	/* designate the current directory where sampling is to happen */
@@ -198,52 +198,62 @@ int begin_sample_from(
 		
     while (bool_sdone != 1)
     {
-		sub_dir_num = 0;
-		sub_file_num = 0;
+		//printf("1\n");
 
-		fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
+		fast_subdirs(cur_parent, curPtr);
+
+		//printf("2\n");
 
 		/* sdirStruct not null sounds not necessary to check! */
 		/*if (!curPtr->sdirStruct) */              
         
 		/* anomaly detection */
-		anomaly_processing(curPtr, prob);
-
-		sub_dir_num = curPtr->sub_dir_num;
-		sub_file_num = curPtr->sub_file_num;
+		//anomaly_processing(curPtr, prob);
 
 
-	    est_total = est_total + (sub_file_num / prob);
 
-		if (sub_file_num / prob > 1000000)
-		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
-		    files to est_total\n",
-		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
+	    est_total = est_total + (curPtr->sub_file_num / prob);
 
-		if (sub_dir_num > 0)
+		//if (sub_file_num / prob > 1000000)
+		printf("Under %s, the prob is %f,/number of files is %ld (subdirs %ld),I added %lf \
+		    files to est_total %lf\n",
+		    get_current_dir_name(), prob, curPtr->sub_file_num, curPtr->sub_dir_num, curPtr->sub_file_num / prob, est_total);
+
+		if ( curPtr->sub_dir_num > 0)
 		{
-			temp_prob = prob / sub_dir_num;
+			temp_prob = prob / curPtr-> sub_dir_num;
 			
 			if (temp_prob < old_prob / g_dq_threshold)
 			{
+				level++;
 				int i;
 				//printf("test!!!!!!\n");
 
+				est_total -=  curPtr->sub_file_num/prob;
+				
+				printf("before d&c est_total %lf\tlevel %d\n", est_total, level);
+
 				for (i = 0; i < g_dq_times; i++)			
 				{
+					printf("d&c %d\n", i);
 					//printf("in D&Q %s\n", get_current_dir_name());
 					begin_sample_from(get_current_dir_name(), curPtr,
 				    					    prob*g_dq_times);
 				}
+				
+				printf("after d&c est_total %lf\n", est_total);
+
 				if (((int) old_prob) == 1)
 					est_num++;
 				chdir(sample_root);
 				bool_sdone = 1;
+
+				level = 0;
 				continue;
 			}
 			prob = temp_prob;	
-			
-			int temp = random_next(sub_dir_num);
+				
+			int temp = random_next( curPtr->sub_dir_num);
 			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
 			curPtr = &curPtr ->sdirStruct[temp];	
 
@@ -466,10 +476,14 @@ number of directories existing there\"\n");
 
 void fast_subdirs(   
     const char *path,               /* path name of the parent dir */
-    struct dir_node *curPtr,  /* */
-	long int *sub_dir_num,		        /* number of sub dirs */
-	long int *sub_file_num)		        /* number of sub files */
+    struct dir_node *curPtr  /* */
+//	long int *sub_dir_num,		        /* number of sub dirs */
+//	long int *sub_file_num)		        /* number of sub files */
+	)
 {
+   long int  sub_dir_num = 0;
+   long int  sub_file_num = 0;
+
     struct dirent **namelist;
     
     size_t alloc;
@@ -490,14 +504,24 @@ void fast_subdirs(
 	/* so we have to scan */
 	newly_covered++;	
 
+     // printf("test1\n");
+
     total_num = scandir(path, &namelist, 0, 0);
+
+       //printf("test2 %d\n", total_num);
 	
 	/* root is given like the absolute path regardless of the cur_dir */
-    (*sub_dir_num) = scandir(path, &namelist, check_type, 0);
+    sub_dir_num = scandir(path, &namelist, check_type, 0);
+
+	//printf("test3 %ld\n", sub_dir_num);
+
 	chdir(path);
+
+
+//	printf("%ld\t%ld\n", sub_file_num, sub_dir_num);
 	
-	*sub_file_num = total_num - *sub_dir_num;
- 	alloc = *sub_dir_num - 2;
+	sub_file_num = total_num - sub_dir_num;
+ 	alloc = sub_dir_num - 2;
 	used = 0;
 
  	assert(alloc >= 0);
@@ -512,7 +536,7 @@ void fast_subdirs(
     
     int temp = 0;
 	/* scan the namelist */
-    for (temp = 0; temp < *sub_dir_num; temp++)
+    for (temp = 0; temp < sub_dir_num; temp++)
     {
 		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
                         (strcmp(namelist[temp]->d_name, "..") == 0))
@@ -525,10 +549,10 @@ void fast_subdirs(
 		
 	}
 
-	*sub_dir_num -= 2;
+	sub_dir_num -= 2;
 
-	curPtr->sub_file_num = *sub_file_num;
-	curPtr->sub_dir_num = *sub_dir_num;
+	curPtr->sub_file_num = sub_file_num;
+	curPtr->sub_dir_num = sub_dir_num;
 	
 	/* update bool_dir_covered info */
 	curPtr->bool_dir_covered = 1;

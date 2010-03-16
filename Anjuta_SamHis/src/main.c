@@ -55,7 +55,7 @@ struct dir_node
 
 void CleanExit(int sig);
 void get_all_subdirs
-(const char *path, struct dir_node *, int *, int *);
+(const char *path, struct dir_node *, long int *, long int *);
 static char *dup_str(const char *s);
 double GetResult();
 int begin_sample_from(const char *root, struct dir_node *, double);
@@ -208,8 +208,8 @@ if (*copy != curPtr) {
 		sub_dir_num = 0;
 		sub_file_num = 0;
 
-		fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
-
+		//fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
+		get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
 		if (*copy != curPtr) {
 		  printf("%ld\t%ld\tpointer is wrong\n", sub_dir_num, sub_file_num);
 		}
@@ -348,8 +348,8 @@ void anomaly_processing(struct dir_node *curPtr, double prob)
 void get_all_subdirs(   
     const char *path,               /* path name of the parent dir */
     struct dir_node *curPtr,  /* */
-	int *sub_dir_num,		        /* number of sub dirs */
-	int *sub_file_num)		        /* number of sub files */
+	long int *sub_dir_num,		        /* number of sub dirs */
+	long int *sub_file_num)		        /* number of sub files */
 {
     DIR *dir;
     struct dirent *pdirent;

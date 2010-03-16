@@ -34,9 +34,9 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
-long int g_boundary_num = 1000000000;
-int g_dk_times;		/* dk iteration loop */
-long int g_dk_threshold;  /* dk threshold */
+long int g_boundary_num = 1000000;
+int g_dq_times;		/* dq iteration loop */
+long int g_dq_threshold;  /* dq threshold */
 int g_large_used =0; /* large directory encountered  */
 int g_large_alloc = 10; /* large directory initially allocated */
 long int *g_large_array;  /* Stores the large array */ 
@@ -55,7 +55,7 @@ struct dir_node
 
 void CleanExit(int sig);
 void get_all_subdirs
-(const char *path, struct dir_node *, long int *, long int *);
+(const char *path, struct dir_node *, int *, int *);
 static char *dup_str(const char *s);
 double GetResult();
 int begin_sample_from(const char *root, struct dir_node *, double);
@@ -104,8 +104,8 @@ int main(int argc, char **argv)
 
 	sample_times = atol(argv[1]);
 	assert(sample_times <= MAX_DRILL_DOWN);
-	g_dk_threshold = atol(argv[3]);
-	g_dk_times = atoi(argv[4]);
+	g_dq_threshold = atol(argv[3]);
+	g_dq_times = atoi(argv[4]);
 	/* initialize the value */
 	{
         est_total = 0;
@@ -123,11 +123,11 @@ int main(int argc, char **argv)
 		printf("malloc g_large_array error!\n");
 		exit(-1);
 	}
-	
-	srand((int)time(0));//different seed number for random function
+	int seed;
+	srand(seed = (int)time(0));//different seed number for random function
 	//srand can also be used like this
 	//srand(2); 
-
+	printf("seed%d\n", seed);
 	int * depth_array = malloc(sample_times * sizeof (int));
 	long int * time_array = malloc (sample_times * sizeof (long int ));
 	
@@ -175,7 +175,6 @@ int random_next(int random_bound)
 	return rand() % random_bound;	
 }
 
-
 /* to ensure accuray, the root parameter should be passed as 
  * absolute!!!! path, so every return would 
  * start from the correct place
@@ -195,25 +194,13 @@ int begin_sample_from(
 
 	double prob = old_prob;
 	double temp_prob; 
-
-        struct dir_node ** copy = &curPtr;
-
-if (*copy != curPtr) {
-                        printf("something is wrong\n");
-                }
-
 		
     while (bool_sdone != 1)
     {
 		sub_dir_num = 0;
 		sub_file_num = 0;
 
-		//fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
-		get_all_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
-		if (*copy != curPtr) {
-		  printf("%ld\t%ld\tpointer is wrong\n", sub_dir_num, sub_file_num);
-		}
-
+		fast_subdirs(cur_parent, curPtr, &sub_dir_num, &sub_file_num);
 
 		/* sdirStruct not null sounds not necessary to check! */
 		/*if (!curPtr->sdirStruct) */              
@@ -221,83 +208,51 @@ if (*copy != curPtr) {
 		/* anomaly detection */
 		anomaly_processing(curPtr, prob);
 
-if (*copy != curPtr) {
-                  printf("%ld\t%ld\tpointer is wrong\n", sub_dir_num, sub_file_num);
-                }
-
-
 		sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
 
 
 	    est_total = est_total + (sub_file_num / prob);
 
-		/*
 		if (sub_file_num / prob > 1000000)
-		*/	printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
-		    files to est_total\n", get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
-		
+		printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
+		    files to est_total\n",
+		    get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
 
 		if (sub_dir_num > 0)
 		{
 			temp_prob = prob / sub_dir_num;
 			
-struct dir_node *c = malloc (sizeof (struct dir_node));
-
-                                c->dir_name = curPtr->dir_name;
-
-
-			if (temp_prob < old_prob / g_dk_threshold)
+			if (temp_prob < old_prob / g_dq_threshold)
 			{
 				int i;
 				//printf("test!!!!!!\n");
 
-
-
-
-				for (i = 0; i < g_dk_times; i++)			
+				for (i = 0; i < g_dq_times; i++)			
 				{
-					printf("d & c: %d\n", i);
-					//if (strcmp(c->dir_name,curPtr->dir_name)!=0)
-                                        	printf("befor recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
-
-					
 					//printf("in D&Q %s\n", get_current_dir_name());
 					begin_sample_from(get_current_dir_name(), curPtr,
-				    					    prob*g_dk_times);
-
-                //                        if (strcmp(c->dir_name,curPtr->dir_name)!=0)
-printf("after recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
-
-
-
+				    					    prob*g_dq_times);
 				}
 				if (((int) old_prob) == 1)
 					est_num++;
 				chdir(sample_root);
 				bool_sdone = 1;
-
 				continue;
 			}
-
 			prob = temp_prob;	
 			
 			int temp = random_next(sub_dir_num);
 			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
-printf("%s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
-			
-printf("changing pointer \n");
 			curPtr = &curPtr ->sdirStruct[temp];	
-printf("%s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
-
 
 			depth++;
 				
 		}
 		
 		/* leaf directory, end the drill down */
-        	else
-        	{
+        else
+        {
 			if (((int) old_prob) == 1)
 				est_num++;
 
@@ -305,8 +260,8 @@ printf("%s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
 			//chdir(sample_root);
 			bool_sdone = 1;
 			
-        	}
-    	} 
+        }
+    } 
 	chdir(sample_root);
     return depth;
 }
@@ -348,8 +303,8 @@ void anomaly_processing(struct dir_node *curPtr, double prob)
 void get_all_subdirs(   
     const char *path,               /* path name of the parent dir */
     struct dir_node *curPtr,  /* */
-	long int *sub_dir_num,		        /* number of sub dirs */
-	long int *sub_file_num)		        /* number of sub files */
+	int *sub_dir_num,		        /* number of sub dirs */
+	int *sub_file_num)		        /* number of sub files */
 {
     DIR *dir;
     struct dirent *pdirent;

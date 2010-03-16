@@ -194,7 +194,6 @@ int begin_sample_from(
 	int bool_sdone = 0;
 
 	double prob = old_prob;
-	double temp_prob; 
 		
     while (bool_sdone != 1)
     {
@@ -221,17 +220,22 @@ int begin_sample_from(
 
 		if ( curPtr->sub_dir_num > 0)
 		{
-			temp_prob = prob / curPtr-> sub_dir_num;
+			depth++;
+
+			prob = prob / curPtr-> sub_dir_num;
+
+			int temp = random_next( curPtr->sub_dir_num);
+                        cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
+                        curPtr = &curPtr ->sdirStruct[temp];
 			
-			if (temp_prob < old_prob / g_dq_threshold)
+			
+			if (prob < old_prob / g_dq_threshold)
 			{
 				level++;
 				int i;
 				//printf("test!!!!!!\n");
 
-				est_total -=  curPtr->sub_file_num/prob;
-				
-				printf("before d&c est_total %lf\tlevel %d\n", est_total, level);
+				chdir(cur_parent);
 
 				for (i = 0; i < g_dq_times; i++)			
 				{
@@ -250,15 +254,7 @@ int begin_sample_from(
 
 				level = 0;
 				continue;
-			}
-			prob = temp_prob;	
-				
-			int temp = random_next( curPtr->sub_dir_num);
-			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
-			curPtr = &curPtr ->sdirStruct[temp];	
-
-			depth++;
-				
+			}				
 		}
 		
 		/* leaf directory, end the drill down */

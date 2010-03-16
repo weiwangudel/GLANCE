@@ -124,9 +124,9 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	
-	srand((int)time(0));//different seed number for random function
+	//srand((int)time(0));//different seed number for random function
 	//srand can also be used like this
-	//srand(2); 
+	srand(1268753293); 
 
 	int * depth_array = malloc(sample_times * sizeof (int));
 	long int * time_array = malloc (sample_times * sizeof (long int ));
@@ -175,6 +175,7 @@ int random_next(int random_bound)
 	return rand() % random_bound;	
 }
 
+struct dir_node ** copy;
 
 /* to ensure accuray, the root parameter should be passed as 
  * absolute!!!! path, so every return would 
@@ -234,8 +235,8 @@ if (*copy != curPtr) {
 
 		/*
 		if (sub_file_num / prob > 1000000)
-		*/	printf("Under %s, the prob is %f,/number of files is %ld,I added %lf \
-		    files to est_total\n", get_current_dir_name(), prob, sub_file_num, sub_file_num / prob);
+		*/	printf("Under %s, the prob is %f,/number of files is %ld (sub_dirs %ld) ,I added %lf \
+		    files to est_total\n", get_current_dir_name(), prob, sub_file_num, sub_dir_num, sub_file_num / prob);
 		
 
 		if (sub_dir_num > 0)
@@ -245,6 +246,7 @@ if (*copy != curPtr) {
 struct dir_node *c = malloc (sizeof (struct dir_node));
 
                                 c->dir_name = curPtr->dir_name;
+printf("prob is %f,  old_prob is %f\n", prob, old_prob);
 
 
 			if (temp_prob < old_prob / g_dk_threshold)
@@ -252,22 +254,30 @@ struct dir_node *c = malloc (sizeof (struct dir_node));
 				int i;
 				//printf("test!!!!!!\n");
 
-
+			
+printf("before d& c: prob is %f\n", prob);
 
 
 				for (i = 0; i < g_dk_times; i++)			
 				{
 					printf("d & c: %d\n", i);
-					//if (strcmp(c->dir_name,curPtr->dir_name)!=0)
-                                        	printf("befor recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
+				printf("before recur copy %p\t original %p\t\n", *copy, curPtr);
+	if (*copy != curPtr)
+                                        	printf("befor recur %s\t%s\t prob %f\n", c->dir_name, curPtr->dir_name, prob);
 
 					
 					//printf("in D&Q %s\n", get_current_dir_name());
+
 					begin_sample_from(get_current_dir_name(), curPtr,
 				    					    prob*g_dk_times);
 
-                //                        if (strcmp(c->dir_name,curPtr->dir_name)!=0)
-printf("after recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
+printf("after recur copy %p\t original %p\t\n", *copy, curPtr);
+
+                                        if (*copy != curPtr)
+					printf("after recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
+
+
+
 
 
 
@@ -280,15 +290,22 @@ printf("after recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
 				continue;
 			}
 
-			prob = temp_prob;	
+			prob = temp_prob;
+			printf("prob is %f\n", prob);	
 			
 			int temp = random_next(sub_dir_num);
-			cur_parent = dup_str(curPtr->sdirStruct[temp].dir_name);
-printf("%s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
+			cur_parent = dup_str((curPtr->sdirStruct[temp]).dir_name);
 			
-printf("changing pointer \n");
-			curPtr = &curPtr ->sdirStruct[temp];	
-printf("%s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
+printf("changing pointer from %p to %p\n", curPtr, &(curPtr->sdirStruct[temp]));
+			curPtr = &(curPtr->sdirStruct[temp]);	
+
+if (*copy != curPtr)
+                                                printf("befor recur %s\t%s\t prob %f\n", c->dir_name, curPtr->dir_name, prob);
+else 
+	printf("pointers equal\n");
+
+
+printf("%s\t%s\tpointers\n", c->dir_name, curPtr->dir_name);
 
 
 			depth++;
@@ -547,7 +564,7 @@ void fast_subdirs(
  	assert(alloc >= 0);
 
     if (alloc > 0 && !(curPtr->sdirStruct
-			= malloc(alloc * sizeof (struct dir_node)) )) 
+			= malloc(alloc * sizeof (struct dir_node )) )) 
 	{
         //goto error_close;
 		printf("malloc error!\n");
@@ -561,7 +578,7 @@ void fast_subdirs(
 		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
                         (strcmp(namelist[temp]->d_name, "..") == 0))
                continue;
-   		if (!(curPtr->sdirStruct[used++].dir_name 
+   		if (!((curPtr->sdirStruct[used++]).dir_name 
 		       = dup_str(namelist[temp]->d_name))) 
 		{
 			printf("get name error!!!!\n");

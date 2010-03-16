@@ -234,7 +234,7 @@ finish_eval=""
 hardcode_into_libs=yes
 
 # Compile-time system search path for libraries.
-sys_lib_search_path_spec="/usr/lib/gcc/i686-redhat-linux/4.4.2 /usr/lib /lib"
+sys_lib_search_path_spec="/usr/lib/gcc/i686-redhat-linux/4.4.3 /usr/lib /lib"
 
 # Run-time system search path for libraries.
 sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib /usr/lib/qt-3.3/lib /usr/lib/xulrunner-1.9.1 "

@@ -124,7 +124,8 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	int seed;
-	srand(seed = (int)time(0));//different seed number for random function
+	//srand(seed = (int)time(0));//different seed number for random function
+	srand(1268762958);
 	//srand can also be used like this
 	//srand(2); 
 	printf("seed%d\n", seed);

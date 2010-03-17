@@ -34,7 +34,7 @@ double est_total;
 double est_num;
 long int already_covered = 0;
 long int newly_covered = 0;
-long int g_boundary_num = 1000000;
+long int g_boundary_num = 1000000000;
 int g_dq_times;		/* dq iteration loop */
 long int g_dq_threshold;  /* dq threshold */
 int g_large_used =0; /* large directory encountered  */
@@ -207,7 +207,7 @@ int begin_sample_from(
 		/*if (!curPtr->sdirStruct) */              
         
 		/* anomaly detection */
-		//anomaly_processing(curPtr, prob);
+		anomaly_processing(curPtr, prob);
 
 
 
@@ -229,13 +229,16 @@ int begin_sample_from(
                         curPtr = &curPtr ->sdirStruct[temp];
 			
 			
-			if (prob < old_prob / g_dq_threshold)
+			if (level < 1 && prob < old_prob / g_dq_threshold)
 			{
 				level++;
+
 				int i;
 				//printf("test!!!!!!\n");
 
 				chdir(cur_parent);
+
+				printf("before d&c est_total %lf \t level %d dir %s\n", est_total, level, cur_parent);
 
 				for (i = 0; i < g_dq_times; i++)			
 				{

@@ -229,7 +229,7 @@ int begin_sample_from(
                         curPtr = &curPtr ->sdirStruct[temp];
 			
 			
-			if (level < 1 && prob < old_prob / g_dq_threshold)
+			if (prob < old_prob / g_dq_threshold)
 			{
 				level++;
 

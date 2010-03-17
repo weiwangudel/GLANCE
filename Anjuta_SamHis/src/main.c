@@ -534,6 +534,15 @@ void fast_subdirs(
     }
     
     int temp = 0;
+
+	for (temp = 0; temp < alloc; temp++)
+	{
+		curPtr->sdirStruct[temp].sub_dir_num = 0;
+		curPtr->sdirStruct[temp].sub_file_num = 0;
+		curPtr->sdirStruct[temp].bool_dir_covered = 0;
+	}
+
+
 	/* scan the namelist */
     for (temp = 0; temp < sub_dir_num; temp++)
     {

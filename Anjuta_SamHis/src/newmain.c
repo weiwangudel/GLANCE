@@ -230,6 +230,7 @@ if (*copy != curPtr) {
 		sub_dir_num = curPtr->sub_dir_num;
 		sub_file_num = curPtr->sub_file_num;
 
+		printf("est_total %lf\n", est_total);
 
 	    est_total = est_total + (sub_file_num / prob);
 
@@ -238,6 +239,7 @@ if (*copy != curPtr) {
 		*/	printf("Under %s, the prob is %f,/number of files is %ld (sub_dirs %ld) ,I added %lf \
 		    files to est_total\n", get_current_dir_name(), prob, sub_file_num, sub_dir_num, sub_file_num / prob);
 		
+printf("est_total %lf\n", est_total);
 
 		if (sub_dir_num > 0)
 		{
@@ -255,7 +257,7 @@ printf("prob is %f,  old_prob is %f\n", prob, old_prob);
 				//printf("test!!!!!!\n");
 
 			
-printf("before d& c: prob is %f\n", prob);
+printf("before d & c: prob is %f, est_total %lf, est_num %lf \n", prob, est_total, est_num);
 
 
 				for (i = 0; i < g_dk_times; i++)			
@@ -277,11 +279,10 @@ printf("after recur copy %p\t original %p\t\n", *copy, curPtr);
 					printf("after recur %s\t%s\tpointer is wrong\n", c->dir_name, curPtr->dir_name);
 
 
-
-
-
-
 				}
+
+printf("after d & c: prob is %f, est_total %lf, est_num %lf \n", prob, est_total, est_num);
+
 				if (((int) old_prob) == 1)
 					est_num++;
 				chdir(sample_root);

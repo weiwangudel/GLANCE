@@ -1,9 +1,9 @@
 /* Programmed by wei wang
  * Directed by professor Howie
  *
- * March 1, 2010
+ * March 19, 2010
  *
- * Generate a filesystem
+ * Count a filesystem use level order traversing and permutation
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,15 +15,11 @@
 #include <sys/time.h>   /* gettimeofday() */
 #include <time.h>		/* time() */
 #include <assert.h>     /* assert()*/
-
 #include "level_queue.h"
 
-#include <fcntl.h>
-#include <malloc.h>
 
 #define MAX_PERMU 1000000
-#define MAX_DRILL_DOWN 1000000
-
+#define MAX_DRILL_DOWN 100
 /* New struct for saving history */
 struct dir_node
 {
@@ -39,36 +35,30 @@ struct timeval end;
 
 double est_total;
 long int sample_times;
-int qcost = 0;
+long int qcost = 0;
 long int already_covered = 0;
 long int newly_covered = 0;
-long int g_boundary_num = 1000000000;
-int g_dq_times;		/* dq iteration loop */
-long int g_dq_threshold;  /* dq threshold */
-int g_large_used =0; /* large directory encountered  */
-int g_large_alloc = 10; /* large directory initially allocated */
-long int *g_large_array;  /* Stores the large array */ 
 long int g_folder;
 long int g_file;
+long int g_thresh;  /* smaller than this value, we crawl */
+int root_flag = 0;
+
 void CleanExit(int sig);
 static char *dup_str(const char *s);
-double GetResult();
 int begin_estimate_from(struct dir_node *rootPtr);
-int random_next(int random_bound);
 int check_type(const struct dirent *entry);
 void fast_subdirs(struct dir_node *curDirPtr);
-void anomaly_processing(struct dir_node *, double prob);
 
 /* why do I have to redefine to avoid the warning of get_current_dir_name? */
 char *get_current_dir_name(void);
 double floor(double);
+
 int ar[MAX_PERMU];
 void swap(int *a, int *b);
 void permutation(int size);
 struct queueLK level_q;
 
 struct dir_node root_dir; /* root directory for estimation */
-
 
 char proc_working_dir[100];
 
@@ -95,7 +85,7 @@ int main(int argc, char* argv[])
 
 	if (argc < 3)
 	{
-		printf("Usage: %s drill-down-times pathname\n",argv[0]);
+		printf("Usage: %s \n",argv[0]);
 		return EXIT_FAILURE; 
 	}
 	if (chdir(argv[2]) != 0)
@@ -109,6 +99,7 @@ int main(int argc, char* argv[])
 
 	g_folder = atol(argv[3]);
 	g_file = atol(argv[4]);
+	g_thresh = atol(argv[5]); 
 
 	/* initialize the value */
 	{
@@ -139,50 +130,50 @@ int main(int argc, char* argv[])
 		est_array[i] = est_total;
 		qcost_array[i] = qcost;
 		est_total = 0;
-	        qcost = 0;		
+	    qcost = 0;		
 		rootPtr->bool_dir_covered = 0;
 		rootPtr->sdirStruct = NULL;
 		rootPtr->dir_abs_path = dup_str(argv[2]);	
+		root_flag = 0;
 		gettimeofday(&sample_end, NULL);				
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
 	double mean = 0;
+	double not_abs = 0;
 	for (i=0; i < sample_times; i++)
 	{	
 		printf("%.2f\n", est_array[i]);
 		mean += abs(est_array[i] - g_file); 
+		not_abs += est_array[i] - g_file;
 	}
-	printf("mean error:%.6f", mean/sample_times/g_file);
+	printf("mean error:%.6f\n", mean/sample_times/g_file);
+	printf("mean of %ld run: %.6f\n", sample_times,
+		 g_file + not_abs/sample_times);
+	printf("not_abs error:%.6f\n", not_abs/sample_times/g_file);
 	mean = 0;
 	for (i=0; i < sample_times; i++)
 	{	
 		printf("%ld\n", qcost_array[i]);
 		mean += qcost_array[i]; 
 	}
-	printf("mean query:%.6f", mean/sample_times);
+	printf("mean query:%.6f\n", mean/sample_times);
+	printf("dir cover percent:%.4f", mean/sample_times/g_folder);
 	
 	CleanExit (2);
 
 	return EXIT_SUCCESS;
 
-  /* store process working directory */
-  strcpy(proc_working_dir, get_current_dir_name());
+	/* store process working directory */
+  	strcpy(proc_working_dir, get_current_dir_name());
 
-  /* initialize queue */
-
-  clearQueue(&level_q);
+  	clearQueue(&level_q);
   
   
-  return 0;
+  	return 0;
 }
 
 
-int random_next(int random_bound)
-{
-	assert(random_bound < RAND_MAX);
-	return rand() % random_bound;	
-}
 
 /* Before calling begin_estimate_from
  * the dir_node struct has been allocated for root
@@ -224,9 +215,9 @@ int begin_estimate_from(struct dir_node *rootPtr)
 
                 /* I find it hard to know whether my sub_folder has 1000 folders
                  * or not*/
-                if ((level > 6)) //x && need_backtrack(cur_dir) == 0)  
-		//if (qcost > 10000)
-                    clength = min (vlength, max(6, floor(vlength/2)));
+                //if ((level > 6)) //x && need_backtrack(cur_dir) == 0)  
+				if (qcost > g_thresh)
+                    clength = min (vlength, max(6, floor(vlength/2.0)));
                 else 
                     clength = vlength;
                 
@@ -236,7 +227,6 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 int i;
                 for (i = 0; i < clength; i++)
                 {  
-                    printf("%d ", ar[i]);  
                     cur_dir->sdirStruct[ar[i]].factor *= vlength*1.0/clength;
                     enQueue(&tempvec, &cur_dir->sdirStruct[ar[i]]);
                 }
@@ -265,12 +255,6 @@ int need_backtrack(struct dir_node *p_dir)
 }
 
 
-double GetResult()
-{
-    return (est_total/sample_times);
-}
-
-
 static char *dup_str(const char *s) 
 {
     size_t n = strlen(s) + 1;
@@ -282,7 +266,6 @@ static char *dup_str(const char *s)
     return t;
 }
 
-int root_flag = 0;
 void fast_subdirs(struct dir_node *curDirPtr) 
 {
     long int  sub_dir_num = 0;
@@ -294,10 +277,11 @@ void fast_subdirs(struct dir_node *curDirPtr)
     int total_num;
 	int used = 0;
 
-	printf("in dir:%s\n", curDirPtr->dir_abs_path);
     if (root_flag == 0)
-		{curDirPtr->factor = 1.0;
-		root_flag = 1;}
+	{	
+		curDirPtr->factor = 1.0;
+		root_flag = 1;
+	}
 	/* already stored the subdirs struct before
 	 * no need to scan the dir again */
 	if (curDirPtr->bool_dir_covered == 1)
@@ -417,7 +401,6 @@ void swap(int *a, int *b)
 
 int Random(int left, int right)
 {
-    
   return left + rand() % (right-left);
 }
 
@@ -436,7 +419,6 @@ void CleanExit(int sig)
     puts("\n\n=============================================================");
 //	printf("\ndirs newly opened %ld\ndirs already_covered %ld\n",
 //			newly_covered, already_covered);
-//	printf("there are on average %.2f files\n", GetResult());
     puts("=============================================================");
     printf("Total Time:%ld milliseconds\n", 
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);

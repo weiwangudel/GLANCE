@@ -163,28 +163,42 @@ int main(int argc, char* argv[])
 	}
 
 	chdir("/tmp");	  /* this is for the output of gprof */
+	
+	printf("%s\t", root_abs_name);
+	printf("%d\t%d\t%f\t", g_level_thresh, g_sdir_thresh, g_percentage);
+
 	double mean = 0;
 	double not_abs = 0;
 	for (i=0; i < sample_times; i++)
 	{	
-		printf("%.2f\n", est_array[i]);
+//		printf("%.2f\n", est_array[i]);
 		mean += abs(est_array[i] - g_file); 
 		not_abs += est_array[i] - g_file;
 	}
-	printf("mean error:%.6f\n", mean/sample_times/g_file);
-	printf("mean of %ld run: %.6f\n", sample_times,
-		 g_file + not_abs/sample_times);
-	printf("not_abs error:%.6f\n", not_abs/sample_times/g_file);
+	mean /= sample_times;
+
+//	printf("mean error:%.6f\n", mean/g_file);
+//	printf("mean of %ld run: %.6f\n", sample_times,
+//		 g_file + not_abs/sample_times);
+//	printf("not_abs error:%.6f\n", not_abs/sample_times/g_file);
+	
+    printf("%.6f\t", mean/g_file);
+ 
 	mean = 0;
 	for (i=0; i < sample_times; i++)
 	{	
-		printf("%ld\n", qcost_array[i]);
+//		printf("%ld\n", qcost_array[i]);
 		mean += qcost_array[i]; 
 	}
-	printf("mean query:%.6f\n", mean/sample_times);
-	printf("dir cover percent:%.4f", mean/sample_times/g_folder);
-	
+	mean /= sample_times;
+
+//	printf("mean query:%.6f\n", mean);
+//	printf("dir cover percent:%.4f", mean/g_folder);
+
+	printf("%.6f\t", mean/g_folder);
+
 	CleanExit (2);
+	
 
 	return EXIT_SUCCESS;
 
@@ -436,10 +450,12 @@ void CleanExit(int sig)
     fflush(stdout);
     gettimeofday(&end, NULL ); 
     
+/*
     if (sig != SIGHUP)
         printf("\nExiting...\n");
     else
         printf("\nRestaring...\n");
+
 
     puts("\n\n=============================================================");
 //	printf("\ndirs newly opened %ld\ndirs already_covered %ld\n",
@@ -449,6 +465,12 @@ void CleanExit(int sig)
 	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);
     printf("Total Time:%ld seconds\n", 
 	(end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
+*/
+	
+	printf("%ld\n", 
+    (end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
+
+
 	exit(0);
 }
 

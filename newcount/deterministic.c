@@ -19,7 +19,7 @@
 
 
 #define MAX_PERMU 1000000
-#define MAX_DRILL_DOWN 100
+#define MAX_DRILL_DOWN 1000
 /* New struct for saving history */
 struct dir_node
 {
@@ -38,10 +38,16 @@ long int sample_times;
 long int qcost = 0;
 long int already_covered = 0;
 long int newly_covered = 0;
+
+/* program parameters */
 long int g_folder;
 long int g_file;
-long int g_thresh;  /* smaller than this value, we crawl */
-int root_flag = 0;
+long int g_qcost_thresh;  /* smaller than this value, we crawl */
+unsigned int g_level_thresh; /* int because level is not so large */
+unsigned int g_sdir_thresh; /* para2: sub dir threshold */
+double g_percentage; /* how large percent to randomly choose */
+
+int root_flag = 0; /* only set root factor to 1 in fast_subdir */
 
 void CleanExit(int sig);
 static char *dup_str(const char *s);
@@ -58,8 +64,6 @@ void swap(int *a, int *b);
 void permutation(int size);
 struct queueLK level_q;
 
-struct dir_node root_dir; /* root directory for estimation */
-
 char proc_working_dir[100];
 
 
@@ -67,11 +71,13 @@ int main(int argc, char* argv[])
 {
 	long int i;
 	struct dir_node *rootPtr;
-	struct dir_node root_dir;
+
+	struct dir_node root_dir; /* root directory for estimation */
 	long int sample_min = 10000000; /* 10 seconds */
 	long int sample_max = 0;
 	struct timeval sample_start;
 	struct timeval sample_end;
+	char *root_abs_name;
 	
 	signal(SIGKILL, CleanExit);
 	signal(SIGTERM, CleanExit);
@@ -83,9 +89,20 @@ int main(int argc, char* argv[])
 	/* start timer */
 	gettimeofday(&start, NULL ); 
 
-	if (argc < 3)
+	if (argc < 9)
 	{
-		printf("Usage: %s \n",argv[0]);
+		printf("Usage: %s \n", argv[0]);
+		printf("arg 1: drill down times (<100)\n");
+		printf("arg 2: file system dir (can be relative path now)\n");
+		printf("arg 3: real dirs\n");
+		printf("arg 4: real file number\n");
+		printf("arg 5: crawl qcost threshold\n");
+		printf("arg 6: crawl level threshold\n");
+		printf("if only qcost, then level = 0\n");
+		printf("if only level, then qcost = 0\n");
+		printf("don't use both > 0\n");
+		printf("arg 7: sub_dir_num for max(sub_dir_num, **)\n");
+		printf("arg 8: percentage chosen, 2 means 50 percent\n"); 
 		return EXIT_FAILURE; 
 	}
 	if (chdir(argv[2]) != 0)
@@ -93,13 +110,20 @@ int main(int argc, char* argv[])
 		printf("Error when chdir to %s", argv[2]);
 		return EXIT_FAILURE; 
 	}
-
+	
+	/* this can support relative path easily */
+    root_abs_name = dup_str(get_current_dir_name());	
 	sample_times = atol(argv[1]);
 	assert(sample_times <= MAX_DRILL_DOWN);
 
 	g_folder = atol(argv[3]);
 	g_file = atol(argv[4]);
-	g_thresh = atol(argv[5]); 
+	g_qcost_thresh = atol(argv[5]); 
+	g_level_thresh = atoi(argv[6]);
+	g_sdir_thresh = atoi(argv[7]);
+	g_percentage = atof(argv[8]);
+
+	assert(g_qcost_thresh*g_level_thresh == 0);
 
 	/* initialize the value */
 	{
@@ -111,7 +135,7 @@ int main(int argc, char* argv[])
 	rootPtr = &root_dir;
 	rootPtr->bool_dir_covered = 0;
 	rootPtr->sdirStruct = NULL;
-    rootPtr->dir_abs_path = dup_str(argv[2]);
+    rootPtr->dir_abs_path = dup_str(root_abs_name);
 
 	int seed;
 	srand(seed = (int)time(0));//different seed number for random function
@@ -133,7 +157,7 @@ int main(int argc, char* argv[])
 	    qcost = 0;		
 		rootPtr->bool_dir_covered = 0;
 		rootPtr->sdirStruct = NULL;
-		rootPtr->dir_abs_path = dup_str(argv[2]);	
+    	rootPtr->dir_abs_path = dup_str(root_abs_name);
 		root_flag = 0;
 		gettimeofday(&sample_end, NULL);				
 	}
@@ -216,8 +240,9 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 /* I find it hard to know whether my sub_folder has 1000 folders
                  * or not*/
                 //if ((level > 6)) //x && need_backtrack(cur_dir) == 0)  
-				if (qcost > g_thresh)
-                    clength = min (vlength, max(6, floor(vlength/2.0)));
+				if ((qcost > g_qcost_thresh) && level > g_level_thresh)
+                    clength = min (vlength, 
+						max(g_sdir_thresh, floor(vlength/g_percentage)));
                 else 
                     clength = vlength;
                 

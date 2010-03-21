@@ -168,47 +168,28 @@ int main(int argc, char* argv[])
 	printf("%d\t%d\t%f\t", g_level_thresh, g_sdir_thresh, g_percentage);
 
 	double mean = 0;
-	double not_abs = 0;
+	//double not_abs = 0;
 	for (i=0; i < sample_times; i++)
 	{	
-//		printf("%.2f\n", est_array[i]);
 		mean += abs(est_array[i] - g_file); 
-		not_abs += est_array[i] - g_file;
+		//not_abs += est_array[i] - g_file;
 	}
 	mean /= sample_times;
 
-//	printf("mean error:%.6f\n", mean/g_file);
-//	printf("mean of %ld run: %.6f\n", sample_times,
-//		 g_file + not_abs/sample_times);
-//	printf("not_abs error:%.6f\n", not_abs/sample_times/g_file);
 	
     printf("%.6f\t", mean/g_file);
  
 	mean = 0;
 	for (i=0; i < sample_times; i++)
 	{	
-//		printf("%ld\n", qcost_array[i]);
 		mean += qcost_array[i]; 
 	}
 	mean /= sample_times;
 
-//	printf("mean query:%.6f\n", mean);
-//	printf("dir cover percent:%.4f", mean/g_folder);
-
-	printf("%.6f\t", mean/g_folder);
-
-	CleanExit (2);
-	
-
-	return EXIT_SUCCESS;
-
-	/* store process working directory */
-  	strcpy(proc_working_dir, get_current_dir_name());
+	printf("%.4f\t", mean/g_folder);
 
   	clearQueue(&level_q);
-  
-  
-  	return 0;
+	CleanExit (2);
 }
 
 

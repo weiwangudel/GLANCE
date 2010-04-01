@@ -138,13 +138,8 @@ int main(int argc, char* argv[])
     rootPtr->dir_abs_path = dup_str(root_abs_name);
 
 	int seed = (int)time(0);
-	//srand(seed);//different seed number for random function
-	seed = 1270153199;
-	printf("%ld\n", seed);
-	//srand(1270152831);	
-	srand(1270153199); 
-//	srand(1270153111);
-
+	srand(seed);//different seed number for random function
+    printf("%d\t", seed);
 	double * est_array = malloc(sample_times * sizeof (double));
 	long int * qcost_array = malloc (sample_times * sizeof (long int ));
 	
@@ -215,7 +210,7 @@ int begin_estimate_from(struct dir_node *rootPtr)
     while (emptyQueue(&level_q) != 1)    
     {
         level++;
-		printf("***************level %d****************\n", level);
+
         initQueue(&tempvec);
         /* for all dirs currently in the queue 
          * these dirs should be in the same level 
@@ -252,11 +247,6 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 for (i = 0; i < clength; i++)
                 {  
                     cur_dir->sdirStruct[ar[i]].factor *= vlength*1.0/clength;
-					printf("%s\t",cur_dir->sdirStruct[ar[i]].dir_abs_path);
-					printf("%d %d %f %d ", clength, vlength, floor(vlength/g_percentage), (int)floor(vlength/g_percentage));
-					printf("%d %d ", max(g_sdir_thresh, floor(vlength/g_percentage)), max(g_sdir_thresh, (int)floor(vlength/g_percentage))); 
-					printf("%f\n", cur_dir->sdirStruct[ar[i]].factor);
-					
                     enQueue(&tempvec, &cur_dir->sdirStruct[ar[i]]);
                 }
             }

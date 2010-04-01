@@ -7,7 +7,7 @@ do
      for p in 2 #3 4 5
      do
 	   echo 3 > /proc/sys/vm/drop_caches
-       ./count 1 /home/wwang/fsgen/32/ 1013 27864 0 $l $d $p
+       ./count 10 /home/wwang/fsgen/32/ 1013 27864 0 $l $d $p
      done
    done
 done

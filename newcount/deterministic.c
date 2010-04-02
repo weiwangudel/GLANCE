@@ -251,12 +251,15 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 }
             }
         }
+		level_q.front = tempvec.front;
+		level_q.rear = tempvec.rear;
+		/*
 		struct dir_node *temp;
         for (; emptyQueue(&tempvec) != 1; )
         {
             temp = outQueue(&tempvec);
             enQueue(&level_q, temp);            
-        }  
+        } */ 
     }   
 }
 

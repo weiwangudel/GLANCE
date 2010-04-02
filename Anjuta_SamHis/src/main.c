@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 
 	if (argc < 3)
 	{
-		printf("Usage: %s drill-down-times pathname\n",argv[0]);
+		printf("Usage: %s drill-down-times pathname dir file\n",argv[0]);
 		return EXIT_FAILURE; 
 	}
 	if (chdir(argv[2]) != 0)
@@ -101,6 +101,9 @@ int main(int argc, char **argv)
 		printf("Error when chdir to %s", argv[2]);
 		return EXIT_FAILURE; 
 	}
+
+	assert(argv[3] != NULL);
+	assert(argv[4] != NULL);
 	real_dir = atol(argv[3]);
 	real_file = atol(argv[4]);
 

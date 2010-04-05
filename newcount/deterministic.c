@@ -46,6 +46,7 @@ long int g_qcost_thresh;  /* smaller than this value, we crawl */
 unsigned int g_level_thresh; /* int because level is not so large */
 unsigned int g_sdir_thresh; /* para2: sub dir threshold */
 double g_percentage; /* how large percent to randomly choose */
+double g_preset_qcost;
 
 int root_flag = 0; /* only set root factor to 1 in fast_subdir */
 
@@ -89,7 +90,7 @@ int main(int argc, char* argv[])
 	/* start timer */
 	gettimeofday(&start, NULL ); 
 
-	if (argc < 9)
+	if (argc < 10)
 	{
 		printf("Usage: %s \n", argv[0]);
 		printf("arg 1: drill down times (<100)\n");
@@ -103,6 +104,7 @@ int main(int argc, char* argv[])
 		printf("don't use both > 0\n");
 		printf("arg 7: sub_dir_num for max(sub_dir_num, **)\n");
 		printf("arg 8: percentage chosen, 2 means 50 percent\n"); 
+		printf("arg 9: qcost limit percentage");
 		return EXIT_FAILURE; 
 	}
 	if (chdir(argv[2]) != 0)
@@ -122,6 +124,7 @@ int main(int argc, char* argv[])
 	g_level_thresh = atoi(argv[6]);
 	g_sdir_thresh = atoi(argv[7]);
 	g_percentage = atof(argv[8]);
+	g_preset_qcost = atof(argv[9]) * g_folder;
 
 	assert(g_qcost_thresh*g_level_thresh == 0);
 
@@ -142,6 +145,9 @@ int main(int argc, char* argv[])
     printf("%d\t", seed);
 	double * est_array = malloc(sample_times * sizeof (double));
 	long int * qcost_array = malloc (sample_times * sizeof (long int ));
+
+	printf("%s\t", root_abs_name);
+	printf("%d\t%d\t%f\t", g_level_thresh, g_sdir_thresh, g_percentage);
 	
 	/* start estimation */
 	for (i=0; i < sample_times; i++)
@@ -161,8 +167,6 @@ int main(int argc, char* argv[])
 
 	chdir("/tmp");	  /* this is for the output of gprof */
 	
-	printf("%s\t", root_abs_name);
-	printf("%d\t%d\t%f\t", g_level_thresh, g_sdir_thresh, g_percentage);
 
 	double mean = 0;
 	//double not_abs = 0;
@@ -224,6 +228,15 @@ int begin_estimate_from(struct dir_node *rootPtr)
             fast_subdirs(cur_dir);
             qcost++;
             est_total = est_total + cur_dir->sub_file_num * cur_dir->factor;
+
+	    /* add qcost control, early exit */
+            if (qcost > g_preset_qcost)
+	    	{
+				printf("%.6f\t", abs(est_total - g_file) * 1.0 / g_file);
+				printf("%.6f\t", qcost*1.0 / g_folder);
+				CleanExit(2);
+		
+            }             
             
             if (cur_dir->sub_dir_num > 0)
             {
@@ -251,15 +264,12 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 }
             }
         }
+		/* there is no need to tempvec.front = NULL; 
+		 * because initQueue could do that and
+		 * won't affect the content that front points to
+		 */
 		level_q.front = tempvec.front;
 		level_q.rear = tempvec.rear;
-		/*
-		struct dir_node *temp;
-        for (; emptyQueue(&tempvec) != 1; )
-        {
-            temp = outQueue(&tempvec);
-            enQueue(&level_q, temp);            
-        } */ 
     }   
 }
 

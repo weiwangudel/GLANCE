@@ -47,6 +47,7 @@ unsigned int g_level_thresh; /* int because level is not so large */
 unsigned int g_sdir_thresh; /* para2: sub dir threshold */
 double g_percentage; /* how large percent to randomly choose */
 double g_preset_qcost;
+double g_exit_thresh;
 
 int root_flag = 0; /* only set root factor to 1 in fast_subdir */
 
@@ -66,7 +67,7 @@ void permutation(int size);
 struct queueLK level_q;
 
 char proc_working_dir[100];
-
+char *g_root_abs_name;
 
 int main(int argc, char* argv[]) 
 {
@@ -78,7 +79,6 @@ int main(int argc, char* argv[])
 	long int sample_max = 0;
 	struct timeval sample_start;
 	struct timeval sample_end;
-	char *root_abs_name;
 	
 	signal(SIGKILL, CleanExit);
 	signal(SIGTERM, CleanExit);
@@ -90,10 +90,10 @@ int main(int argc, char* argv[])
 	/* start timer */
 	gettimeofday(&start, NULL ); 
 
-	if (argc < 10)
+	if (argc != 11)
 	{
 		printf("Usage: %s \n", argv[0]);
-		printf("arg 1: drill down times (<100)\n");
+		printf("arg 1: drill down times (must be 1 to support exit percent)\n");
 		printf("arg 2: file system dir (can be relative path now)\n");
 		printf("arg 3: real dirs\n");
 		printf("arg 4: real file number\n");
@@ -104,7 +104,8 @@ int main(int argc, char* argv[])
 		printf("don't use both > 0\n");
 		printf("arg 7: sub_dir_num for max(sub_dir_num, **)\n");
 		printf("arg 8: percentage chosen, 2 means 50 percent\n"); 
-		printf("arg 9: qcost limit percentage");
+		printf("arg 9: qcost begin percentage\n");
+		printf("arg 10: qcost exit percentage\n"); 
 		return EXIT_FAILURE; 
 	}
 	if (chdir(argv[2]) != 0)
@@ -114,7 +115,7 @@ int main(int argc, char* argv[])
 	}
 	
 	/* this can support relative path easily */
-    root_abs_name = dup_str(get_current_dir_name());	
+    g_root_abs_name = dup_str(get_current_dir_name());	
 	sample_times = atol(argv[1]);
 	assert(sample_times <= MAX_DRILL_DOWN);
 
@@ -124,7 +125,8 @@ int main(int argc, char* argv[])
 	g_level_thresh = atoi(argv[6]);
 	g_sdir_thresh = atoi(argv[7]);
 	g_percentage = atof(argv[8]);
-	g_preset_qcost = atof(argv[9]) * g_folder;
+	g_preset_qcost = atof(argv[9]);
+	g_exit_thresh = atof(argv[10]);
 
 	assert(g_qcost_thresh*g_level_thresh == 0);
 
@@ -138,17 +140,14 @@ int main(int argc, char* argv[])
 	rootPtr = &root_dir;
 	rootPtr->bool_dir_covered = 0;
 	rootPtr->sdirStruct = NULL;
-    rootPtr->dir_abs_path = dup_str(root_abs_name);
+    rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 
 	int seed = (int)time(0);
 	srand(seed);//different seed number for random function
-    printf("%d\t", seed);
+    //printf("%d\t", seed);
 	double * est_array = malloc(sample_times * sizeof (double));
 	long int * qcost_array = malloc (sample_times * sizeof (long int ));
 
-	printf("%s\t", root_abs_name);
-	printf("%d\t%d\t%f\t", g_level_thresh, g_sdir_thresh, g_percentage);
-	
 	/* start estimation */
 	for (i=0; i < sample_times; i++)
 	{		
@@ -160,7 +159,7 @@ int main(int argc, char* argv[])
 	    qcost = 0;		
 		rootPtr->bool_dir_covered = 0;
 		rootPtr->sdirStruct = NULL;
-    	rootPtr->dir_abs_path = dup_str(root_abs_name);
+    	rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 		root_flag = 0;
 		gettimeofday(&sample_end, NULL);				
 	}
@@ -230,11 +229,22 @@ int begin_estimate_from(struct dir_node *rootPtr)
             est_total = est_total + cur_dir->sub_file_num * cur_dir->factor;
 
 	    /* add qcost control, early exit */
-            if (qcost > g_preset_qcost)
+            if (qcost > g_preset_qcost * g_folder)
 	    	{
+    			gettimeofday(&end, NULL ); 
+				printf("%s\t", g_root_abs_name);
+				printf("%d\t%d\t%f\t", g_level_thresh, 
+							g_sdir_thresh, g_percentage);
+	
 				printf("%.6f\t", abs(est_total - g_file) * 1.0 / g_file);
 				printf("%.6f\t", qcost*1.0 / g_folder);
-				CleanExit(2);
+				printf("%ld\n", 
+				    (end.tv_sec-start.tv_sec)*1
+						+(end.tv_usec-start.tv_usec)/1000000);
+
+				g_preset_qcost += 0.05;
+				if (g_preset_qcost > g_exit_thresh)
+					exit(0);	
 		
             }             
             

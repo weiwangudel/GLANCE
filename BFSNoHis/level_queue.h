@@ -1,3 +1,7 @@
+/* The following good quality code (because it works fine!) is written 
+ * by anonymous (to whom I feel grateful).
+ * Use utf8 ENCODE to see Comments
+ */
 #include <stdio.h>
 #include <stdlib.h>
 

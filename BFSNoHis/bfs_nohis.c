@@ -21,13 +21,15 @@
 
 #define MAX_PERMU 1000000
 #define MAX_DRILL_DOWN 1000
-/* New struct for saving history */
+
+
+long int g_cur_sub_file_num; /* current directory's number of files contained */
+long int g_cur_sub_dir_num;  /* current directory's number of dirs contained */
+
+/* New struct for not saving history */
 struct dir_node
 {
-	long int sub_file_num;
-	long int sub_dir_num;
     double factor;	
-	int bool_dir_covered;
 	char *dir_abs_path;	 /* absolute path, needed for BFS */			
 	struct dir_node *sdirStruct; /* child array dynamically allocated */
 };
@@ -139,7 +141,6 @@ int main(int argc, char* argv[])
 
 	/* Initialize the dir_node struct */
 	rootPtr = &root_dir;
-	rootPtr->bool_dir_covered = 0;
 	rootPtr->sdirStruct = NULL;
     rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 
@@ -158,7 +159,6 @@ int main(int argc, char* argv[])
 		qcost_array[i] = qcost;
 		est_total = 0;
 	    qcost = 0;		
-		rootPtr->bool_dir_covered = 0;
 		rootPtr->sdirStruct = NULL;
     	rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 		root_flag = 0;
@@ -227,7 +227,7 @@ int begin_estimate_from(struct dir_node *rootPtr)
              */
             fast_subdirs(cur_dir);
             qcost++;
-            est_total = est_total + cur_dir->sub_file_num * cur_dir->factor;
+            est_total = est_total + g_cur_sub_file_num * cur_dir->factor;
 
 	    /* add qcost control, early exit */
             if (qcost > g_preset_qcost * g_folder)
@@ -249,14 +249,11 @@ int begin_estimate_from(struct dir_node *rootPtr)
 		
             }             
             
-            if (cur_dir->sub_dir_num > 0)
+            if (g_cur_sub_dir_num > 0)
             {
                 
-                vlength = cur_dir->sub_dir_num;
+                vlength = g_cur_sub_dir_num;
 
-                /* I find it hard to know whether my sub_folder has 1000 folders
-                 * or not*/
-                //if ((level > 6)) //x && need_backtrack(cur_dir) == 0)  
 				if ((qcost > g_qcost_thresh) && level > g_level_thresh)
                     clength = min (vlength, 
 						max(g_sdir_thresh, (int)floor(vlength/g_percentage)));
@@ -284,6 +281,11 @@ int begin_estimate_from(struct dir_node *rootPtr)
     }   
 }
 
+/* 
+ * abandoned the following backtrack 
+ * I find it hard to know whether my sub_folder has 1000 folders
+ * or not
+ * May 24, 2010
 int need_backtrack(struct dir_node *p_dir)
 {
     int i;
@@ -296,7 +298,7 @@ int need_backtrack(struct dir_node *p_dir)
     }
     return 0;
 }
-
+ */
 
 static char *dup_str(const char *s) 
 {
@@ -311,8 +313,6 @@ static char *dup_str(const char *s)
 
 void fast_subdirs(struct dir_node *curDirPtr) 
 {
-    long int  sub_dir_num = 0;
-    long int  sub_file_num = 0;
 
     struct dirent **namelist;
     char *path;
@@ -325,16 +325,6 @@ void fast_subdirs(struct dir_node *curDirPtr)
 		curDirPtr->factor = 1.0;
 		root_flag = 1;
 	}
-	/* already stored the subdirs struct before
-	 * no need to scan the dir again */
-	if (curDirPtr->bool_dir_covered == 1)
-	{
-		/* This change dir is really important */
-		already_covered++;
-		chdir(path);
-
-		return;
-	}
 		
 	/* so we have to scan */
 	newly_covered++;
@@ -345,11 +335,11 @@ void fast_subdirs(struct dir_node *curDirPtr)
     total_num = scandir(path, &namelist, 0, 0);
 
 	/* root is given like the absolute path regardless of the cur_dir */
-    sub_dir_num = scandir(path, &namelist, check_type, 0);
+    g_cur_sub_dir_num = scandir(path, &namelist, check_type, 0);
 
 
-	sub_file_num = total_num - sub_dir_num;
- 	alloc = sub_dir_num - 2;
+	g_cur_sub_file_num = total_num - g_cur_sub_dir_num;
+ 	alloc = g_cur_sub_dir_num - 2;
 	used = 0;
 
  	assert(alloc >= 0);
@@ -364,16 +354,9 @@ void fast_subdirs(struct dir_node *curDirPtr)
     
     int temp = 0;
 
-	for (temp = 0; temp < alloc; temp++)
-	{
-		curDirPtr->sdirStruct[temp].sub_dir_num = 0;
-		curDirPtr->sdirStruct[temp].sub_file_num = 0;
-		curDirPtr->sdirStruct[temp].bool_dir_covered = 0;
-	}
-
 
 	/* scan the namelist */
-    for (temp = 0; temp < sub_dir_num; temp++)
+    for (temp = 0; temp < g_cur_sub_dir_num; temp++)
     {
 		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
                         (strcmp(namelist[temp]->d_name, "..") == 0))
@@ -391,12 +374,8 @@ void fast_subdirs(struct dir_node *curDirPtr)
         chdir(path);		
 	}
 
-	sub_dir_num -= 2;
+	g_cur_sub_dir_num -= 2;
 
-	curDirPtr->sub_file_num = sub_file_num;
-	curDirPtr->sub_dir_num = sub_dir_num;
-	/* update bool_dir_covered info */
-	curDirPtr->bool_dir_covered = 1;
 }
 
 

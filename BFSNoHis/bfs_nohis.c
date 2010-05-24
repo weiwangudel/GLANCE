@@ -5,6 +5,8 @@
  *
  * Count a filesystem use level order traversing and permutation
  * But keep no history of previously traversed directories.
+ * If only dealing with long int sub_file_num but not free absolute path
+ * Memory usage won't go down.
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>

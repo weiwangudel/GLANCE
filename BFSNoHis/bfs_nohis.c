@@ -7,6 +7,7 @@
  * But keep no history of previously traversed directories.
  * If only dealing with long int sub_file_num but not free absolute path
  * Memory usage won't go down.
+ * Only free unused dir_abs_path(Didnot free subdir) 557M vs 605M on m10M
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>

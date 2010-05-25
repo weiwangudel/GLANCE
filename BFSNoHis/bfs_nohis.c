@@ -273,6 +273,13 @@ int begin_estimate_from(struct dir_node *rootPtr)
                     enQueue(&tempvec, &cur_dir->sdirStruct[ar[i]]);
                 }
             }
+				
+			/* save some memory  */
+			if (1)
+			{
+				if (cur_dir->dir_abs_path)	
+					free(cur_dir->dir_abs_path);
+			}
         }
 		/* there is no need to tempvec.front = NULL; 
 		 * because initQueue could do that and

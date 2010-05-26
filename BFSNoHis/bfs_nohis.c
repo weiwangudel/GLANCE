@@ -1,13 +1,15 @@
 /* Programmed by wei wang (wwang@gwu.edu)
  * Directed by professor Howie Huang (howie@gwu.edu)
  *
- * May 24, 2010
+ * May 25, 2010
  *
  * Count a filesystem use level order traversing and permutation
  * But keep no history of previously traversed directories.
  * If only dealing with long int sub_file_num but not free absolute path
  * Memory usage won't go down.
  * Only free unused dir_abs_path(Didnot free subdir) 557M vs 605M on m10M
+ 
+ * free(cur_dir)
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -280,6 +282,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
 			{
 				if (cur_dir->dir_abs_path)	
 					free(cur_dir->dir_abs_path);
+				if (cur_dir)
+					free(cur_dir);
 			}
         }
 		/* there is no need to tempvec.front = NULL; 

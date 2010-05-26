@@ -1,7 +1,7 @@
 /* Programmed by wei wang (wwang@gwu.edu)
  * Directed by professor Howie Huang (howie@gwu.edu)
  *
- * May 25, 2010
+ * May 26, 2010
  *
  * Count a filesystem use level order traversing and permutation
  * But keep no history of previously traversed directories.
@@ -9,7 +9,7 @@
  * Memory usage won't go down.
  * Only free unused dir_abs_path(Didnot free subdir) 557M vs 605M on m10M
  
- * free(cur_dir)
+ * free(cur_dir) causes glibc error.[Donot commit if runs immediately cause error]
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -282,8 +282,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
 			{
 				if (cur_dir->dir_abs_path)	
 					free(cur_dir->dir_abs_path);
-				if (cur_dir)
-					free(cur_dir);
+				/* if (cur_dir != NULL)
+					free(cur_dir); */
 			}
         }
 		/* there is no need to tempvec.front = NULL; 

@@ -81,9 +81,16 @@ int maticulous_calculate()
 	{
 		mean += g_his_res[i];
 	}
-	mean /= g_num_history;
-        printf("\nFinal Report= 0.8*%.6f + 0.2*%.6f = %.6f\n", mean,
-		g_cur_res, mean*0.8+g_cur_res*0.2);	
+	if (g_num_history > 0)
+	{
+		mean /= g_num_history;
+        	printf("\nFinal Report= 0.8*%.6f + 0.2*%.6f = %.6f\n", mean,
+			g_cur_res, mean*0.8+g_cur_res*0.2);	
+	}
+	else 
+	{
+		printf("\nFinal Report = 1*%.6f\n", g_cur_res);
+	}
 }
 
 /* Append mode write to a file 

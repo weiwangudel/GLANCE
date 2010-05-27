@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define  MAX_HIS 100
+#define  MAX_HIS 20
 
 double g_his_res[MAX_HIS];
 double g_cur_res;  /* the result of current run (got from pipe) */
@@ -61,7 +61,9 @@ int load_history_run()
     {	
 		fscanf(fhistory, "%lf",  &g_his_res[history_i % MAX_HIS]);
 		history_i++;		
-	}		
+	}
+	if (history_i > MAX_HIS)
+		history_i = MAX_HIS + 1;			
 	g_num_history = history_i - 1;
 	/* append and close */
 	fclose(fhistory);
@@ -71,9 +73,10 @@ int load_history_run()
 int maticulous_calculate()
 {
 	int i = 0;
-	g_final_res = g_cur_res; /* save this one but report a different? */
 	double mean = 0;
 	
+	g_final_res = g_cur_res; /* save this one but report a different? */
+
 	for (i=0; i < g_num_history; i++)
 	{
 		mean += g_his_res[i];

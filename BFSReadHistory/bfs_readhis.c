@@ -165,20 +165,25 @@ int main(int argc, char* argv[])
 		gettimeofday(&sample_end, NULL);				
 	}
 
-	chdir("/tmp");	  /* this is for the output of gprof */
-	
 
 	double mean = 0;
 	//double not_abs = 0;
 	for (i=0; i < sample_times; i++)
 	{	
-		mean += abs(est_array[i] - g_file); 
-		//not_abs += est_array[i] - g_file;
+		mean += est_array[i] - 0; 
 	}
 	mean /= sample_times;
 
 	
-    printf("%.6f\t", mean/g_file);
+    printf("%.6f\n", mean);
+
+    mean = 0;
+	for (i=0; i < sample_times; i++)
+	{
+		mean += abs(est_array[i] - g_file);
+	}
+	mean /= sample_times;
+	//printf("%.6f\t", mean/g_file);
  
 	mean = 0;
 	for (i=0; i < sample_times; i++)
@@ -187,10 +192,10 @@ int main(int argc, char* argv[])
 	}
 	mean /= sample_times;
 
-	printf("%.4f\t", mean/g_folder);
+	//printf("%.4f\t", mean/g_folder);
 
   	clearQueue(&level_q);
-	CleanExit (2);
+	//CleanExit (2);    
 }
 
 
@@ -229,26 +234,6 @@ int begin_estimate_from(struct dir_node *rootPtr)
             qcost++;
             est_total = est_total + g_cur_sub_file_num * cur_dir->factor;
 
-	    /* add qcost control, early exit */
-            if (qcost > g_preset_qcost * g_folder)
-	    	{
-    			gettimeofday(&end, NULL ); 
-				printf("%s\t", g_root_abs_name);
-				printf("%d\t%d\t%f\t", g_level_thresh, 
-							g_sdir_thresh, g_percentage);
-	
-				printf("%.6f\t", abs(est_total - g_file) * 1.0 / g_file);
-				printf("%.6f\t", qcost*1.0 / g_folder);
-				printf("%ld\n", 
-				    (end.tv_sec-start.tv_sec)*1
-						+(end.tv_usec-start.tv_usec)/1000000);
-
-				g_preset_qcost += 0.05;
-				if (g_preset_qcost > g_exit_thresh)
-					exit(0);	
-		
-            }             
-            
             if (g_cur_sub_dir_num > 0)
             {
                 

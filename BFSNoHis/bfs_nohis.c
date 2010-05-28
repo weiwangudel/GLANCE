@@ -30,13 +30,13 @@
 
 long int g_cur_sub_file_num; /* current directory's number of files contained */
 long int g_cur_sub_dir_num;  /* current directory's number of dirs contained */
+struct dir_node *g_sdirStruct; /*child array of cur dir dynamically allocated */
 
 /* New struct for not saving history */
 struct dir_node
 {
     double factor;	
 	char *dir_abs_path;	 /* absolute path, needed for BFS */			
-	struct dir_node *sdirStruct; /* child array dynamically allocated */
 };
 struct timeval start;
 struct timeval end;
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
 
 	/* Initialize the dir_node struct */
 	rootPtr = &root_dir;
-	rootPtr->sdirStruct = NULL;
+	g_sdirStruct = NULL;
     rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 
 	int seed = (int)time(0);
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 		qcost_array[i] = qcost;
 		est_total = 0;
 	    qcost = 0;		
-		rootPtr->sdirStruct = NULL;
+		g_sdirStruct = NULL;
     	rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 		root_flag = 0;
 		gettimeofday(&sample_end, NULL);				
@@ -272,8 +272,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 int i;				
                 for (i = 0; i < clength; i++)
                 {  
-                    cur_dir->sdirStruct[ar[i]].factor *= vlength*1.0/clength;
-                    enQueue(&tempvec, &cur_dir->sdirStruct[ar[i]]);
+                    g_sdirStruct[ar[i]].factor *= vlength*1.0/clength;
+                    enQueue(&tempvec, &g_sdirStruct[ar[i]]);
                 }
             }
 				
@@ -282,8 +282,6 @@ int begin_estimate_from(struct dir_node *rootPtr)
 			{
 				if (cur_dir->dir_abs_path)	
 					free(cur_dir->dir_abs_path);
-				/* if (cur_dir != NULL)
-					free(cur_dir); */
 			}
         }
 		/* there is no need to tempvec.front = NULL; 
@@ -358,7 +356,7 @@ void fast_subdirs(struct dir_node *curDirPtr)
 
  	assert(alloc >= 0);
 
-    if (alloc > 0 && !(curDirPtr->sdirStruct
+    if (alloc > 0 && !(g_sdirStruct
 			= malloc(alloc * sizeof (struct dir_node)) )) 
 	{
         //goto error_close;
@@ -378,12 +376,12 @@ void fast_subdirs(struct dir_node *curDirPtr)
         /* get the absolute path for sub_dirs */
         chdir(namelist[temp]->d_name);
         
-   		if (!(curDirPtr->sdirStruct[used].dir_abs_path 
+   		if (!(g_sdirStruct[used].dir_abs_path 
 		       = dup_str(get_current_dir_name()))) 
 		{
 			printf("get name error!!!!\n");
     	}
-        curDirPtr->sdirStruct[used].factor = curDirPtr->factor;
+        g_sdirStruct[used].factor = curDirPtr->factor;
 		used++;
         chdir(path);		
 	}

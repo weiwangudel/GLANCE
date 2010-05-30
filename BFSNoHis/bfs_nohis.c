@@ -1,7 +1,7 @@
 /* Programmed by wei wang (wwang@gwu.edu)
  * Directed by professor Howie Huang (howie@gwu.edu)
  *
- * May 26, 2010
+ * May 30, 2010
  *
  * Count a filesystem use level order traversing and permutation
  * But keep no history of previously traversed directories.
@@ -9,7 +9,11 @@
  * Memory usage won't go down.
  * Only free unused dir_abs_path(Didnot free subdir) 557M vs 605M on m10M
  
- * free(cur_dir) causes glibc error.[Donot commit if runs immediately cause error]
+ * free(cur_dir) causes glibc error.
+ * [Do not commit if runs immediately cause error]
+ * 
+ * Only allocate memory for those directories to be explored (using BFS)
+ * Sampling out in advance.
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +34,10 @@
 
 long int g_cur_sub_file_num; /* current directory's number of files contained */
 long int g_cur_sub_dir_num;  /* current directory's number of dirs contained */
+int g_level = 0;  /* root is in level 1 */
+int g_vlength;
+int g_clength;
+
 struct dir_node *g_sdirStruct; /*child array of cur dir dynamically allocated */
 
 /* New struct for not saving history */
@@ -83,8 +91,6 @@ int main(int argc, char* argv[])
 	struct dir_node *rootPtr;
 
 	struct dir_node root_dir; /* root directory for estimation */
-	long int sample_min = 10000000; /* 10 seconds */
-	long int sample_max = 0;
 	struct timeval sample_start;
 	struct timeval sample_end;
 	
@@ -98,22 +104,18 @@ int main(int argc, char* argv[])
 	/* start timer */
 	gettimeofday(&start, NULL ); 
 
-	if (argc != 11)
+	if (argc != 10)
 	{
 		printf("Usage: %s \n", argv[0]);
 		printf("arg 1: drill down times (must be 1 to support exit percent)\n");
 		printf("arg 2: file system dir (can be relative path now)\n");
 		printf("arg 3: real dirs\n");
 		printf("arg 4: real file number\n");
-		printf("arg 5: crawl qcost threshold\n");
-		printf("arg 6: crawl level threshold\n");
-		printf("if only qcost, then level = 0\n");
-		printf("if only level, then qcost = 0\n");
-		printf("don't use both > 0\n");
-		printf("arg 7: sub_dir_num for max(sub_dir_num, **)\n");
-		printf("arg 8: percentage chosen, 2 means 50 percent\n"); 
-		printf("arg 9: qcost begin percentage\n");
-		printf("arg 10: qcost exit percentage\n"); 
+		printf("arg 5: crawl level threshold\n");
+		printf("arg 6: sub_dir_num for max(sub_dir_num, **)\n");
+		printf("arg 7: percentage chosen, 2 means 50 percent\n"); 
+		printf("arg 8: qcost begin percentage\n");
+		printf("arg 9: qcost exit percentage\n"); 
 		return EXIT_FAILURE; 
 	}
 	if (chdir(argv[2]) != 0)
@@ -129,14 +131,11 @@ int main(int argc, char* argv[])
 
 	g_folder = atol(argv[3]);
 	g_file = atol(argv[4]);
-	g_qcost_thresh = atol(argv[5]); 
-	g_level_thresh = atoi(argv[6]);
-	g_sdir_thresh = atoi(argv[7]);
-	g_percentage = atof(argv[8]);
-	g_preset_qcost = atof(argv[9]);
-	g_exit_thresh = atof(argv[10]);
-
-	assert(g_qcost_thresh*g_level_thresh == 0);
+	g_level_thresh = atoi(argv[5]);
+	g_sdir_thresh = atoi(argv[6]);
+	g_percentage = atof(argv[7]);
+	g_preset_qcost = atof(argv[8]);
+	g_exit_thresh = atof(argv[9]);
 
 	/* initialize the value */
 	{
@@ -205,9 +204,6 @@ int main(int argc, char* argv[])
  */
 int begin_estimate_from(struct dir_node *rootPtr)
 {
-    int level = 0;  /* root is in level 1 */
-    int clength;
-    int vlength;
     struct queueLK tempvec;
     struct dir_node *cur_dir = NULL;
 	            
@@ -218,7 +214,7 @@ int begin_estimate_from(struct dir_node *rootPtr)
     /* if queue is not empty */
     while (emptyQueue(&level_q) != 1)    
     {
-        level++;
+        g_level++;
 
         initQueue(&tempvec);
         /* for all dirs currently in the queue 
@@ -256,24 +252,12 @@ int begin_estimate_from(struct dir_node *rootPtr)
             
             if (g_cur_sub_dir_num > 0)
             {
-                
-                vlength = g_cur_sub_dir_num;
-
-				if ((qcost > g_qcost_thresh) && level > g_level_thresh)
-                    clength = min (vlength, 
-						max(g_sdir_thresh, (int)floor(vlength/g_percentage)));
-                else 
-                    clength = vlength;
-                
-                /* choose clength number of folders to add to queue */
-                /* need to use permutation */
-				
-                permutation(vlength);
+         
                 int i;				
-                for (i = 0; i < clength; i++)
+                for (i = 0; i < g_clength; i++)
                 {  
-                    g_sdirStruct[ar[i]].factor *= vlength*1.0/clength;
-                    enQueue(&tempvec, &g_sdirStruct[ar[i]]);
+                    g_sdirStruct[i].factor *= g_vlength*1.0/g_clength;
+                    enQueue(&tempvec, &g_sdirStruct[i]);
                 }
             }
 				
@@ -293,24 +277,6 @@ int begin_estimate_from(struct dir_node *rootPtr)
     }   
 }
 
-/* 
- * abandoned the following backtrack 
- * I find it hard to know whether my sub_folder has 1000 folders
- * or not
- * May 24, 2010
-int need_backtrack(struct dir_node *p_dir)
-{
-    int i;
-
-    for (i = 0; i < p_dir->sub_dir_num; i++)
-    {
-        if (p_dir->sdirStruct[i].sub_dir_num == 0 &&
-            p_dir->sdirStruct[i].sub_file_num >= 1000)
-        return 1;
-    }
-    return 0;
-}
- */
 
 static char *dup_str(const char *s) 
 {
@@ -325,7 +291,6 @@ static char *dup_str(const char *s)
 
 void fast_subdirs(struct dir_node *curDirPtr) 
 {
-
     struct dirent **namelist;
     char *path;
     size_t alloc;
@@ -354,27 +319,36 @@ void fast_subdirs(struct dir_node *curDirPtr)
  	alloc = g_cur_sub_dir_num - 2;
 	used = 0;
 
- 	assert(alloc >= 0);
+    g_vlength = alloc;
+	if (g_level > g_level_thresh)
+        g_clength = min (g_vlength, 
+            max(g_sdir_thresh, (int)floor(g_vlength/g_percentage)));
+    else 
+        g_clength = g_vlength;
 
-    if (alloc > 0 && !(g_sdirStruct
-			= malloc(alloc * sizeof (struct dir_node)) )) 
+ 	assert(g_clength >= 0);
+
+    if (g_clength > 0 && !(g_sdirStruct
+			= malloc(g_clength * sizeof (struct dir_node)) )) 
 	{
-        //goto error_close;
 		printf("malloc error!\n");
 		exit(-1);
     }
     
+    /* choose g_clength number of folders to add to queue */
+    /* need to use permutation */
+    permutation(g_cur_sub_dir_num);
+    
     int temp = 0;
-
-
+    
 	/* scan the namelist */
-    for (temp = 0; temp < g_cur_sub_dir_num; temp++)
+    for (temp = 0; temp < g_clength+2 ; temp++)
     {
-		if ((strcmp(namelist[temp]->d_name, ".") == 0) ||
-                        (strcmp(namelist[temp]->d_name, "..") == 0))
+		if ((strcmp(namelist[ar[temp]]->d_name, ".") == 0) ||
+                        (strcmp(namelist[ar[temp]]->d_name, "..") == 0))
                continue;
         /* get the absolute path for sub_dirs */
-        chdir(namelist[temp]->d_name);
+        chdir(namelist[ar[temp]]->d_name);
         
    		if (!(g_sdirStruct[used].dir_abs_path 
 		       = dup_str(get_current_dir_name()))) 
@@ -384,6 +358,10 @@ void fast_subdirs(struct dir_node *curDirPtr)
         g_sdirStruct[used].factor = curDirPtr->factor;
 		used++;
         chdir(path);		
+
+        /* have already got enough directories, exit */
+        if (used == g_clength)
+            break;
 	}
 
 	g_cur_sub_dir_num -= 2;
@@ -445,23 +423,6 @@ void CleanExit(int sig)
     fflush(stdout);
     gettimeofday(&end, NULL ); 
     
-/*
-    if (sig != SIGHUP)
-        printf("\nExiting...\n");
-    else
-        printf("\nRestaring...\n");
-
-
-    puts("\n\n=============================================================");
-//	printf("\ndirs newly opened %ld\ndirs already_covered %ld\n",
-//			newly_covered, already_covered);
-    puts("=============================================================");
-    printf("Total Time:%ld milliseconds\n", 
-	(end.tv_sec-start.tv_sec)*1000+(end.tv_usec-start.tv_usec)/1000);
-    printf("Total Time:%ld seconds\n", 
-	(end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
-*/
-	
 	printf("%ld\n", 
     (end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
 

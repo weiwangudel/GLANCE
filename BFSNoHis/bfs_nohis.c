@@ -363,7 +363,9 @@ void fast_subdirs(struct dir_node *curDirPtr)
         if (used == g_clength)
             break;
 	}
-
+	
+	for (temp=0; temp<g_cur_sub_dir_num; temp++)
+	  free(namelist[temp]);
 	g_cur_sub_dir_num -= 2;
 
 }
@@ -425,7 +427,6 @@ void CleanExit(int sig)
     
 	printf("%ld\n", 
     (end.tv_sec-start.tv_sec)*1+(end.tv_usec-start.tv_usec)/1000000);
-
 
 	exit(0);
 }

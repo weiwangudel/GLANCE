@@ -1,7 +1,7 @@
 /* Programmed by wei wang (wwang@gwu.edu)
  * Directed by professor Howie Huang (howie@gwu.edu)
  *
- * May 30, 2010
+ * June 01, 2010
  *
  * Count a filesystem use level order traversing and permutation
  * But keep no history of previously traversed directories.
@@ -14,6 +14,11 @@
  * 
  * Only allocate memory for those directories to be explored (using BFS)
  * Sampling out in advance.
+ *
+ * remember to free namelist[] and namelist. The result for this is
+ * 0.298 coverage with memory use from 250M to 415M. Compared with 240M to
+ * 567M (only allocated for needed directory) and 240M to 527M (free only 1
+ * scandir related namelist)
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -296,6 +301,7 @@ void fast_subdirs(struct dir_node *curDirPtr)
     size_t alloc;
     int total_num;
 	int used = 0;
+    int temp = 0;
 
     if (root_flag == 0)
 	{	
@@ -310,6 +316,10 @@ void fast_subdirs(struct dir_node *curDirPtr)
 	chdir(path);	
 
     total_num = scandir(path, &namelist, 0, 0);
+
+	for (temp=0; temp<total_num; temp++)
+	  free(namelist[temp]);
+	free(namelist);
 
 	/* root is given like the absolute path regardless of the cur_dir */
     g_cur_sub_dir_num = scandir(path, &namelist, check_type, 0);
@@ -339,7 +349,6 @@ void fast_subdirs(struct dir_node *curDirPtr)
     /* need to use permutation */
     permutation(g_cur_sub_dir_num);
     
-    int temp = 0;
     
 	/* scan the namelist */
     for (temp = 0; temp < g_clength+2 ; temp++)
@@ -366,6 +375,8 @@ void fast_subdirs(struct dir_node *curDirPtr)
 	
 	for (temp=0; temp<g_cur_sub_dir_num; temp++)
 	  free(namelist[temp]);
+	free(namelist);
+
 	g_cur_sub_dir_num -= 2;
 
 }

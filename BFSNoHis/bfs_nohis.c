@@ -19,6 +19,10 @@
  * 0.298 coverage with memory use from 250M to 415M. Compared with 240M to
  * 567M (only allocated for needed directory) and 240M to 527M (free only 1
  * scandir related namelist)
+ 
+ * Further free get_current_dir_name. the result is about 250M to 370M (meaning
+ * the maximum memory consumption is 120M for 10Million file system). 
+ * 
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -298,7 +302,7 @@ void fast_subdirs(struct dir_node *curDirPtr)
 {
     struct dirent **namelist;
     char *path;
-	char *temp_abs_name; /* used for free */
+	char *temp_abs_name; /* used for the free of absolute name */
     size_t alloc;
     int total_num;
 	int used = 0;
@@ -342,7 +346,7 @@ void fast_subdirs(struct dir_node *curDirPtr)
  	assert(g_clength >= 0);
 
     if (g_clength > 0 && !(g_sdirStruct
-			= malloc(g_clength * sizeof (struct dir_node)) )) 
+			= malloc(g_clength * sizeof(struct dir_node)))) 
 	{
 		printf("malloc error!\n");
 		exit(-1);

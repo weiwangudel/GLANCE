@@ -298,6 +298,7 @@ void fast_subdirs(struct dir_node *curDirPtr)
 {
     struct dirent **namelist;
     char *path;
+	char *temp_abs_name; /* used for free */
     size_t alloc;
     int total_num;
 	int used = 0;
@@ -317,6 +318,8 @@ void fast_subdirs(struct dir_node *curDirPtr)
 
     total_num = scandir(path, &namelist, 0, 0);
 
+	/* what we are after is only the number. However, namelist consumes
+     * much memory. Free namelist!!! */
 	for (temp=0; temp<total_num; temp++)
 	  free(namelist[temp]);
 	free(namelist);
@@ -360,10 +363,12 @@ void fast_subdirs(struct dir_node *curDirPtr)
         chdir(namelist[ar[temp]]->d_name);
         
    		if (!(g_sdirStruct[used].dir_abs_path 
-		       = dup_str(get_current_dir_name()))) 
+		       = dup_str(temp_abs_name = get_current_dir_name()))) 
 		{
 			printf("get name error!!!!\n");
     	}
+
+		free(temp_abs_name);  /* save memory */
         g_sdirStruct[used].factor = curDirPtr->factor;
 		used++;
         chdir(path);		

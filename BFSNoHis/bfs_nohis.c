@@ -22,7 +22,12 @@
  
  * Further free get_current_dir_name. the result is about 250M to 370M (meaning
  * the maximum memory consumption is 120M for 10Million file system). 
- * 
+
+ * The result of testing 100Million FS. 21.06% coverage 0.026 error rate
+ * And 4067seconds running time with 2.4GB memory consumption (232.8M to 2.6GB)
+ * May really need to allocate and free one by one and check whether running 
+ * time increases.
+
  ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>

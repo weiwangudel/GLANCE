@@ -1,7 +1,7 @@
 /* Programmed by wei wang (wwang@gwu.edu)
  * Directed by professor Howie Huang (howie@gwu.edu)
  *
- * June 01, 2010
+ * June 04, 2010
  *
  * Count a filesystem use level order traversing and permutation
  * But keep no history of previously traversed directories.
@@ -52,7 +52,8 @@ int g_level = 0;  /* root is in level 1 */
 int g_vlength;
 int g_clength;
 
-struct dir_node *g_sdirStruct; /*child array of cur dir dynamically allocated */
+/* Pointer array */
+struct dir_node **g_sdirStruct;
 
 /* New struct for not saving history */
 struct dir_node
@@ -102,9 +103,8 @@ char *g_root_abs_name;
 int main(int argc, char* argv[]) 
 {
 	long int i;
-	struct dir_node *rootPtr;
+	struct dir_node *rootPtr; /* root directory for estimation */
 
-	struct dir_node root_dir; /* root directory for estimation */
 	struct timeval sample_start;
 	struct timeval sample_end;
 	
@@ -158,7 +158,11 @@ int main(int argc, char* argv[])
 	}
 
 	/* Initialize the dir_node struct */
-	rootPtr = &root_dir;
+	if (!(rootPtr = (struct dir_node *)malloc(sizeof(struct dir_node))))	
+	{
+		printf("malloc error!\n");
+		exit(-1);
+	}
 	g_sdirStruct = NULL;
     rootPtr->dir_abs_path = dup_str(g_root_abs_name);
 
@@ -270,8 +274,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 int i;				
                 for (i = 0; i < g_clength; i++)
                 {  
-                    g_sdirStruct[i].factor *= g_vlength*1.0/g_clength;
-                    enQueue(&tempvec, &g_sdirStruct[i]);
+                    g_sdirStruct[i]->factor *= g_vlength*1.0/g_clength;
+                    enQueue(&tempvec, g_sdirStruct[i]);
                 }
             }
 				
@@ -280,6 +284,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
 			{
 				if (cur_dir->dir_abs_path)	
 					free(cur_dir->dir_abs_path);
+				if (cur_dir)
+					free(cur_dir);
 			}
         }
 		/* there is no need to tempvec.front = NULL; 
@@ -350,12 +356,24 @@ void fast_subdirs(struct dir_node *curDirPtr)
 
  	assert(g_clength >= 0);
 
-    if (g_clength > 0 && !(g_sdirStruct
-			= malloc(g_clength * sizeof(struct dir_node)))) 
+	if (g_sdirStruct)
+		free(g_sdirStruct);
+	if (!(g_sdirStruct = (struct dir_node **) 
+			malloc(g_clength * sizeof (struct dir_node *))))
 	{
 		printf("malloc error!\n");
 		exit(-1);
-    }
+	}
+	
+	for (temp=0; temp < g_clength; temp++)
+	{
+		if (!(g_sdirStruct[temp] = (struct dir_node *) 
+				malloc(sizeof(struct dir_node))))	
+		{
+			printf("malloc error!\n");
+			exit(-1);
+		}
+	}	
     
     /* choose g_clength number of folders to add to queue */
     /* need to use permutation */
@@ -371,14 +389,14 @@ void fast_subdirs(struct dir_node *curDirPtr)
         /* get the absolute path for sub_dirs */
         chdir(namelist[ar[temp]]->d_name);
         
-   		if (!(g_sdirStruct[used].dir_abs_path 
+   		if (!(g_sdirStruct[used]->dir_abs_path 
 		       = dup_str(temp_abs_name = get_current_dir_name()))) 
 		{
 			printf("get name error!!!!\n");
     	}
 
 		free(temp_abs_name);  /* save memory */
-        g_sdirStruct[used].factor = curDirPtr->factor;
+        g_sdirStruct[used]->factor = curDirPtr->factor;
 		used++;
         chdir(path);		
 

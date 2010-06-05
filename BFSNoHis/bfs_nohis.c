@@ -27,8 +27,26 @@
  * And 4067seconds running time with 2.4GB memory consumption (232.8M to 2.6GB)
  * May really need to allocate and free one by one and check whether running 
  * time increases.
+ * 100Million
+ * Results:
+ * root@ONEWay:/home/weiwang/Desktop/BFSNoHis# ./count 1 /media/disk-1/ 7082391 100970460  4 3 2 0 1
+ * /media/disk-1    4    3    2.000000    1.000000    0.000000    0
+ * /media/disk-1    4    3    2.000000    0.675135    0.050000    590
+ * /media/disk-1    4    3    2.000000    0.470420    0.100000    1187
+ * /media/disk-1    4    3    2.000000    0.287378    0.150000    2313
+ * /media/disk-1    4    3    2.000000    0.034578    0.200000    3986
+ * 0.009953    0.2103    4070
 
- ***********************************************************************/
+ * The consumption is nearly constant :
+ * Final 365M
+ * Beginning 238M
+ * Consumption average 130M.
+
+ * Running time 4070. (our paper reported result of 4298s)
+
+ * Conclusion: Memory consumption low. Performance not worse.
+
+**************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,52 +1,11 @@
 /* Programmed by wei wang (wwang@gwu.edu)
  * Directed by professor Howie Huang (howie@gwu.edu)
  *
- * June 04, 2010
+ * June 05, 2010
  *
- * Count a filesystem use level order traversing and permutation
- * But keep no history of previously traversed directories.
- * If only dealing with long int sub_file_num but not free absolute path
- * Memory usage won't go down.
- * Only free unused dir_abs_path(Didnot free subdir) 557M vs 605M on m10M
- 
- * free(cur_dir) causes glibc error.
- * [Do not commit if runs immediately cause error]
+ * After malloc array element one by one.
  * 
- * Only allocate memory for those directories to be explored (using BFS)
- * Sampling out in advance.
- *
- * remember to free namelist[] and namelist. The result for this is
- * 0.298 coverage with memory use from 250M to 415M. Compared with 240M to
- * 567M (only allocated for needed directory) and 240M to 527M (free only 1
- * scandir related namelist)
- 
- * Further free get_current_dir_name. the result is about 250M to 370M (meaning
- * the maximum memory consumption is 120M for 10Million file system). 
-
- * The result of testing 100Million FS. 21.06% coverage 0.026 error rate
- * And 4067seconds running time with 2.4GB memory consumption (232.8M to 2.6GB)
- * May really need to allocate and free one by one and check whether running 
- * time increases.
- * 100Million
- * Results:
- * root@ONEWay:/home/weiwang/Desktop/BFSNoHis# ./count 1 /media/disk-1/ 7082391 100970460  4 3 2 0 1
- * /media/disk-1    4    3    2.000000    1.000000    0.000000    0
- * /media/disk-1    4    3    2.000000    0.675135    0.050000    590
- * /media/disk-1    4    3    2.000000    0.470420    0.100000    1187
- * /media/disk-1    4    3    2.000000    0.287378    0.150000    2313
- * /media/disk-1    4    3    2.000000    0.034578    0.200000    3986
- * 0.009953    0.2103    4070
-
- * The consumption is nearly constant :
- * Final 365M
- * Beginning 238M
- * Consumption average 130M.
-
- * Running time 4070. (our paper reported result of 4298s)
-
- * Conclusion: Memory consumption low. Performance not worse.
-
-**************************************************************************/
+ ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,14 +29,15 @@ int g_level = 0;  /* root is in level 1 */
 int g_vlength;
 int g_clength;
 
-/* Pointer array */
-struct dir_node **g_sdirStruct;
+struct dir_node *g_sdirStruct; /*child array of cur dir dynamically allocated */
 
 /* New struct for not saving history */
 struct dir_node
 {
+	int flag_last;
     double factor;	
 	char *dir_abs_path;	 /* absolute path, needed for BFS */			
+	struct dir_node *p_to_eldest_brother; /* points to the eldest brother */
 };
 struct timeval start;
 struct timeval end;
@@ -176,13 +136,15 @@ int main(int argc, char* argv[])
 	}
 
 	/* Initialize the dir_node struct */
-	if (!(rootPtr = (struct dir_node *)malloc(sizeof(struct dir_node))))	
+	if (!(rootPtr = (struct dir_node *)malloc(sizeof(struct dir_node))))
 	{
-		printf("malloc error!\n");
+		printf("malloc error\n");
 		exit(-1);
 	}
 	g_sdirStruct = NULL;
     rootPtr->dir_abs_path = dup_str(g_root_abs_name);
+	rootPtr->flag_last = 1;
+	rootPtr->p_to_eldest_brother = rootPtr;
 
 	int seed = (int)time(0);
 	srand(seed);//different seed number for random function
@@ -292,8 +254,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
                 int i;				
                 for (i = 0; i < g_clength; i++)
                 {  
-                    g_sdirStruct[i]->factor *= g_vlength*1.0/g_clength;
-                    enQueue(&tempvec, g_sdirStruct[i]);
+                    g_sdirStruct[i].factor *= g_vlength*1.0/g_clength;
+                    enQueue(&tempvec, &g_sdirStruct[i]);
                 }
             }
 				
@@ -302,8 +264,8 @@ int begin_estimate_from(struct dir_node *rootPtr)
 			{
 				if (cur_dir->dir_abs_path)	
 					free(cur_dir->dir_abs_path);
-				if (cur_dir)
-					free(cur_dir);
+				if (cur_dir->flag_last == 1)
+					free(cur_dir->p_to_eldest_brother);
 			}
         }
 		/* there is no need to tempvec.front = NULL; 
@@ -374,24 +336,12 @@ void fast_subdirs(struct dir_node *curDirPtr)
 
  	assert(g_clength >= 0);
 
-	if (g_sdirStruct)
-		free(g_sdirStruct);
-	if (!(g_sdirStruct = (struct dir_node **) 
-			malloc(g_clength * sizeof (struct dir_node *))))
+    if (g_clength > 0 && !(g_sdirStruct
+			= malloc(g_clength * sizeof(struct dir_node)))) 
 	{
 		printf("malloc error!\n");
 		exit(-1);
-	}
-	
-	for (temp=0; temp < g_clength; temp++)
-	{
-		if (!(g_sdirStruct[temp] = (struct dir_node *) 
-				malloc(sizeof(struct dir_node))))	
-		{
-			printf("malloc error!\n");
-			exit(-1);
-		}
-	}	
+    }
     
     /* choose g_clength number of folders to add to queue */
     /* need to use permutation */
@@ -407,20 +357,25 @@ void fast_subdirs(struct dir_node *curDirPtr)
         /* get the absolute path for sub_dirs */
         chdir(namelist[ar[temp]]->d_name);
         
-   		if (!(g_sdirStruct[used]->dir_abs_path 
+   		if (!(g_sdirStruct[used].dir_abs_path 
 		       = dup_str(temp_abs_name = get_current_dir_name()))) 
 		{
 			printf("get name error!!!!\n");
     	}
 
 		free(temp_abs_name);  /* save memory */
-        g_sdirStruct[used]->factor = curDirPtr->factor;
+        g_sdirStruct[used].factor = curDirPtr->factor;
+		g_sdirStruct[used].flag_last = 0;
+	
 		used++;
         chdir(path);		
 
         /* have already got enough directories, exit */
         if (used == g_clength)
+		{
+			g_sdirStruct[used-1].p_to_eldest_brother = g_sdirStruct;	
             break;
+		}
 	}
 	
 	for (temp=0; temp<g_cur_sub_dir_num; temp++)

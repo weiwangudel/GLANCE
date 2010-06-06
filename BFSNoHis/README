@@ -1,0 +1,3 @@
+Version 89: Low memory consumption with allocation of an array one element by one element.
+Version 90: Low memory consumption with additional struct field support.
+Version 87: 89 ignited by this version.
